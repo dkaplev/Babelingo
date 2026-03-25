@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: Colors.party.doodleInk,
+    borderColor: Colors.party.neonStroke,
   },
   primary: {
     backgroundColor: Colors.party.accent,
@@ -43,10 +43,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: Colors.party.doodleInk,
-        shadowOffset: { width: 3, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 0,
+        shadowColor: Colors.party.accent,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.55,
+        shadowRadius: 12,
       },
       android: { elevation: 4 },
     }),
@@ -64,5 +64,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
   },
-  labelGhost: { color: Colors.party.doodleInk },
+  labelGhost: { color: Colors.party.text },
 });

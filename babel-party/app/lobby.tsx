@@ -71,6 +71,6 @@ const styles = StyleSheet.create({
     color: Colors.party.text,
     fontSize: 17,
     borderWidth: 3,
-    borderColor: Colors.party.doodleInk,
+    borderColor: Colors.party.neonStroke,
   },
 });

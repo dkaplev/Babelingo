@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 18,
     borderWidth: 3,
-    borderColor: Colors.party.doodleInk,
+    borderColor: Colors.party.neonStroke,
   },
   ruleRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
   ruleNumWrap: {
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: Colors.party.doodleInk,
+    borderColor: Colors.party.neonStroke,
   },
   ruleNum: { fontFamily: Font.bodyBold, color: '#fff', fontSize: 15 },
   rule: { flex: 1, fontFamily: Font.body, color: Colors.party.text, fontSize: 17, lineHeight: 26 },

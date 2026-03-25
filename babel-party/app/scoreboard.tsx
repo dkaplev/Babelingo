@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     gap: 12,
     borderWidth: 3,
-    borderColor: Colors.party.doodleInk,
+    borderColor: Colors.party.neonStroke,
   },
   rowFirst: { borderLeftWidth: 6, borderLeftColor: Colors.party.podiumGold },
   rowSecond: { borderLeftWidth: 6, borderLeftColor: Colors.party.podiumSilver },

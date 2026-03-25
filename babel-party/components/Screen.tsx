@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Font.title,
     fontSize: 36,
-    color: Colors.party.doodleInk,
+    color: Colors.party.accentPop,
     marginBottom: 8,
     letterSpacing: -0.5,
     transform: [{ rotate: Platform.OS === 'ios' ? '-0.8deg' : '0deg' }],
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   subtitleHighlight: {
     fontFamily: Font.bodyBold,
     fontSize: 18,
-    color: Colors.party.accent2,
+    color: Colors.party.accentPop,
     marginBottom: 22,
     lineHeight: 26,
   },
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 22,
     borderTopWidth: 3,
-    borderTopColor: Colors.party.borderSubtle,
+    borderTopColor: Colors.party.neonStroke,
     borderStyle: Platform.OS === 'android' ? 'solid' : 'dashed',
     backgroundColor: Colors.party.surface,
   },

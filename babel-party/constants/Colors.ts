@@ -1,37 +1,46 @@
-const accent = '#e45641';
-const accent2 = '#2f6f64';
-const surface = '#f4efe4';
-const surface2 = '#e8e0d4';
+/** Neon Retro — party game night (magenta / cyan / orange on dark navy). */
+const navy = '#1A1B4B';
+const navyMid = '#24285F';
+const navyCard = '#2A2E72';
+const magenta = '#D527B7';
+const cyan = '#48D6D2';
+const orange = '#F9C46B';
 
 export default {
   party: {
-    accent,
-    accent2,
-    surface,
-    surface2,
-    text: '#3a3128',
-    textMuted: '#6b5f52',
-    card: '#fffdf8',
-    borderSubtle: '#d4cbc0',
-    danger: '#c94c5c',
-    success: '#2f6f64',
-    podiumGold: '#e4a01a',
-    podiumSilver: '#8a8278',
-    podiumBronze: '#b45309',
-    doodleInk: '#2c261f',
+    /** ~10% — primary CTAs */
+    accent: magenta,
+    /** ~30% — secondary panels, chips, neon borders */
+    accent2: cyan,
+    /** Joy / highlights / “hero” type */
+    accentPop: orange,
+    /** ~60% — base */
+    surface: navy,
+    surface2: navyMid,
+    card: navyCard,
+    text: '#F4F6FF',
+    textMuted: '#9BA3E8',
+    borderSubtle: '#3D4278',
+    /** High-contrast outline (replaces doodle ink) */
+    neonStroke: cyan,
+    danger: '#FF5C7A',
+    success: cyan,
+    podiumGold: orange,
+    podiumSilver: cyan,
+    podiumBronze: '#B01D94',
   },
   light: {
-    text: '#3a3128',
-    background: '#f4efe4',
-    tint: accent,
-    tabIconDefault: '#8a8278',
-    tabIconSelected: accent,
+    text: '#F4F6FF',
+    background: navy,
+    tint: magenta,
+    tabIconDefault: '#9BA3E8',
+    tabIconSelected: cyan,
   },
   dark: {
-    text: '#3a3128',
-    background: '#f4efe4',
-    tint: accent2,
-    tabIconDefault: '#8a8278',
-    tabIconSelected: accent2,
+    text: '#F4F6FF',
+    background: navy,
+    tint: cyan,
+    tabIconDefault: '#9BA3E8',
+    tabIconSelected: orange,
   },
 };

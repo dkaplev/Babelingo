@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: Colors.party.doodleInk,
+    borderColor: Colors.party.neonStroke,
   },
   badgeText: { fontFamily: Font.bodyBold, color: '#fff', fontSize: 15 },
   step: { flex: 1, fontFamily: Font.body, color: Colors.party.text, fontSize: 17, lineHeight: 26 },

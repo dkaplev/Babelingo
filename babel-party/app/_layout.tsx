@@ -1,10 +1,11 @@
 import { Caveat_700Bold } from '@expo-google-fonts/caveat';
 import { Kalam_400Regular, Kalam_700Bold } from '@expo-google-fonts/kalam';
-import { ThemeProvider, DefaultTheme } from '@react-navigation/native';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { Audio } from 'expo-av';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
@@ -17,9 +18,9 @@ export { ErrorBoundary } from 'expo-router';
 SplashScreen.preventAutoHideAsync();
 
 const navTheme = {
-  ...DefaultTheme,
+  ...DarkTheme,
   colors: {
-    ...DefaultTheme.colors,
+    ...DarkTheme.colors,
     primary: Colors.party.accent,
     background: Colors.party.surface,
     card: Colors.party.surface2,
@@ -62,6 +63,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={navTheme}>
+      <StatusBar style="light" />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: Colors.party.surface2 },
