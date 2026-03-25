@@ -1,6 +1,7 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
+import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { normalizeTranslationText } from '@/lib/normalizeTranslation';
@@ -87,39 +88,39 @@ export default function RevealScreen() {
 }
 
 const styles = StyleSheet.create({
-  muted: { color: Colors.party.textMuted },
+  muted: { fontFamily: Font.body, color: Colors.party.textMuted },
   block: {
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 18,
     backgroundColor: Colors.party.card,
-    borderWidth: 1,
-    borderColor: Colors.party.borderSubtle,
+    borderWidth: 3,
+    borderColor: Colors.party.doodleInk,
     marginBottom: 12,
   },
   blockAccent: {
-    borderLeftWidth: 4,
+    borderLeftWidth: 6,
     borderLeftColor: Colors.party.accent2,
   },
-  originalLabel: { color: Colors.party.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },
-  original: { color: Colors.party.text, fontSize: 18, fontWeight: '600', marginTop: 6, lineHeight: 26 },
-  bigLabel: { color: Colors.party.accent2, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
+  originalLabel: { fontFamily: Font.bodyBold, color: Colors.party.textMuted, fontSize: 12, letterSpacing: 0.4 },
+  original: { fontFamily: Font.body, color: Colors.party.text, fontSize: 18, marginTop: 6, lineHeight: 26 },
+  bigLabel: { fontFamily: Font.bodyBold, color: Colors.party.accent2, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6 },
   big: {
-    color: Colors.party.text,
-    fontSize: 26,
-    lineHeight: 34,
-    fontWeight: '900',
+    fontFamily: Font.title,
+    color: Colors.party.doodleInk,
+    fontSize: 30,
+    lineHeight: 36,
     marginTop: 10,
   },
   meta: { marginTop: 8, gap: 8 },
-  metaText: { color: Colors.party.textMuted, fontSize: 13, lineHeight: 19 },
+  metaText: { fontFamily: Font.body, color: Colors.party.textMuted, fontSize: 14, lineHeight: 20 },
   scoreRow: {
     marginTop: 20,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 18,
     backgroundColor: Colors.party.surface2,
-    borderWidth: 1,
-    borderColor: Colors.party.borderSubtle,
+    borderWidth: 3,
+    borderColor: Colors.party.doodleInk,
   },
-  scoreMain: { color: Colors.party.success, fontSize: 24, fontWeight: '900' },
-  scoreSub: { color: Colors.party.textMuted, marginTop: 8, fontSize: 13, lineHeight: 18 },
+  scoreMain: { fontFamily: Font.title, color: Colors.party.success, fontSize: 28 },
+  scoreSub: { fontFamily: Font.body, color: Colors.party.textMuted, marginTop: 8, fontSize: 14, lineHeight: 20 },
 });

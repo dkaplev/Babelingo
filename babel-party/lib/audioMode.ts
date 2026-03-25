@@ -1,14 +1,18 @@
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
 
 /**
- * iOS: `allowsRecordingIOS: true` routes TTS to the earpiece. Use this before `Speech.speak`.
+ * Loudspeaker + media playback. iOS: avoid MixWithOthers routing TTS to earpiece when
+ * recording was active; we still use allowsRecordingIOS: false for playback.
+ * Android: DuckOthers avoids DoNotMix blocking expo-speech / AV playback.
  */
 export async function audioModePlaybackSpeaker(): Promise<void> {
+  await Audio.setIsEnabledAsync(true);
   await Audio.setAudioModeAsync({
     allowsRecordingIOS: false,
     playsInSilentModeIOS: true,
+    staysActiveInBackground: false,
     interruptionModeIOS: InterruptionModeIOS.DuckOthers,
-    interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+    interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
     shouldDuckAndroid: true,
     playThroughEarpieceAndroid: false,
   });
@@ -16,11 +20,13 @@ export async function audioModePlaybackSpeaker(): Promise<void> {
 
 /** Call before starting a microphone recording. */
 export async function audioModeRecording(): Promise<void> {
+  await Audio.setIsEnabledAsync(true);
   await Audio.setAudioModeAsync({
     allowsRecordingIOS: true,
     playsInSilentModeIOS: true,
+    staysActiveInBackground: false,
     interruptionModeIOS: InterruptionModeIOS.DuckOthers,
-    interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+    interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
     shouldDuckAndroid: true,
     playThroughEarpieceAndroid: false,
   });

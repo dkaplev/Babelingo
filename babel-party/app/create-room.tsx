@@ -1,6 +1,7 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
+import { Font } from '@/constants/Typography';
 import { LANGUAGES, defaultLanguagePool } from '@/lib/languages';
 import { trackEvent } from '@/lib/analytics';
 import type { DifficultyPreset, PhraseCategory } from '@/lib/types';
@@ -135,7 +136,7 @@ export default function CreateRoomScreen() {
             key={c.key}
             onPress={() => setCategory(c.key)}
             style={[styles.miniChip, category === c.key && styles.miniChipOn]}>
-            <Text style={styles.miniChipText}>{c.label}</Text>
+            <Text style={[styles.miniChipText, category === c.key && styles.miniChipTextOn]}>{c.label}</Text>
           </Pressable>
         ))}
       </View>
@@ -147,7 +148,7 @@ export default function CreateRoomScreen() {
             key={l.code}
             onPress={() => toggleLang(l.code)}
             style={[styles.miniChip, langSet.has(l.code) && styles.miniChipOn]}>
-            <Text style={styles.miniChipText}>{l.label}</Text>
+            <Text style={[styles.miniChipText, langSet.has(l.code) && styles.miniChipTextOn]}>{l.label}</Text>
           </Pressable>
         ))}
       </View>
@@ -161,14 +162,14 @@ const styles = StyleSheet.create({
   section: {
     marginTop: 20,
     marginBottom: 10,
+    fontFamily: Font.bodyBold,
     color: Colors.party.textMuted,
     fontSize: 13,
-    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   stepper: { marginBottom: 16 },
-  stepperLabel: { color: Colors.party.text, fontWeight: '600', marginBottom: 8 },
+  stepperLabel: { fontFamily: Font.bodyBold, color: Colors.party.text, marginBottom: 8 },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   stepperBtn: {
     width: 44,
@@ -177,41 +178,42 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.party.card,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.party.borderSubtle,
+    borderWidth: 2,
+    borderColor: Colors.party.doodleInk,
   },
   stepperBtnDisabled: { opacity: 0.35 },
-  stepperBtnText: { color: Colors.party.text, fontSize: 22, fontWeight: '700' },
-  stepperValue: { color: Colors.party.text, fontSize: 20, fontWeight: '800', minWidth: 36, textAlign: 'center' },
+  stepperBtnText: { fontFamily: Font.bodyBold, color: Colors.party.text, fontSize: 22 },
+  stepperValue: { fontFamily: Font.bodyBold, color: Colors.party.text, fontSize: 20, minWidth: 36, textAlign: 'center' },
   toggle: {
     padding: 14,
     borderRadius: 12,
     backgroundColor: Colors.party.card,
-    borderWidth: 1,
-    borderColor: Colors.party.borderSubtle,
+    borderWidth: 2,
+    borderColor: Colors.party.doodleInk,
   },
   toggleOn: { borderColor: Colors.party.accent, backgroundColor: Colors.party.surface2 },
-  toggleText: { color: Colors.party.text, fontWeight: '700' },
+  toggleText: { fontFamily: Font.bodyBold, color: Colors.party.text },
   chips: { gap: 10 },
   chip: {
     padding: 14,
     borderRadius: 16,
     backgroundColor: Colors.party.card,
-    borderWidth: 1,
-    borderColor: Colors.party.borderSubtle,
+    borderWidth: 2,
+    borderColor: Colors.party.doodleInk,
   },
   chipOn: { borderColor: Colors.party.accent, backgroundColor: Colors.party.surface2 },
-  chipTitle: { color: Colors.party.text, fontWeight: '800', fontSize: 16 },
-  chipHint: { color: Colors.party.textMuted, marginTop: 4, fontSize: 13 },
+  chipTitle: { fontFamily: Font.bodyBold, color: Colors.party.text, fontSize: 17 },
+  chipHint: { fontFamily: Font.body, color: Colors.party.textMuted, marginTop: 4, fontSize: 14 },
   rowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   miniChip: {
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 999,
     backgroundColor: Colors.party.card,
-    borderWidth: 1,
-    borderColor: Colors.party.borderSubtle,
+    borderWidth: 2,
+    borderColor: Colors.party.doodleInk,
   },
-  miniChipOn: { backgroundColor: Colors.party.accent2, borderColor: Colors.party.accent2 },
-  miniChipText: { color: Colors.party.text, fontWeight: '600', fontSize: 13 },
+  miniChipOn: { backgroundColor: Colors.party.accent2, borderColor: Colors.party.doodleInk },
+  miniChipText: { fontFamily: Font.bodyBold, color: Colors.party.text, fontSize: 14 },
+  miniChipTextOn: { color: '#fff' },
 });

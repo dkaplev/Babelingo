@@ -1,6 +1,7 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
+import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { useRouter } from 'expo-router';
@@ -55,26 +56,28 @@ export default function InstructionsScreen() {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.party.card,
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 18,
-    borderWidth: 1,
-    borderColor: Colors.party.borderSubtle,
+    borderWidth: 3,
+    borderColor: Colors.party.doodleInk,
   },
   ruleRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
   ruleNumWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: Colors.party.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.party.doodleInk,
   },
-  ruleNum: { color: '#fff', fontWeight: '800', fontSize: 14 },
-  rule: { flex: 1, color: Colors.party.text, fontSize: 16, lineHeight: 24 },
+  ruleNum: { fontFamily: Font.bodyBold, color: '#fff', fontSize: 15 },
+  rule: { flex: 1, fontFamily: Font.body, color: Colors.party.text, fontSize: 17, lineHeight: 26 },
   divider: {
-    height: StyleSheet.hairlineWidth,
+    height: 2,
     backgroundColor: Colors.party.borderSubtle,
     marginVertical: 14,
-    marginLeft: 42,
+    marginLeft: 44,
   },
 });

@@ -1,31 +1,39 @@
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { Caveat_700Bold } from '@expo-google-fonts/caveat';
+import { Kalam_400Regular, Kalam_700Bold } from '@expo-google-fonts/kalam';
+import { ThemeProvider, DefaultTheme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { Audio } from 'expo-av';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import Colors from '@/constants/Colors';
+import { Font } from '@/constants/Typography';
+import { audioModePlaybackSpeaker } from '@/lib/audioMode';
 
 export { ErrorBoundary } from 'expo-router';
 
 SplashScreen.preventAutoHideAsync();
 
 const navTheme = {
-  ...DarkTheme,
+  ...DefaultTheme,
   colors: {
-    ...DarkTheme.colors,
+    ...DefaultTheme.colors,
+    primary: Colors.party.accent,
     background: Colors.party.surface,
     card: Colors.party.surface2,
     text: Colors.party.text,
-    primary: Colors.party.accent,
-    border: Colors.party.surface2,
+    border: Colors.party.borderSubtle,
+    notification: Colors.party.accent,
   },
 };
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    Caveat_700Bold,
+    Kalam_400Regular,
+    Kalam_700Bold,
   });
 
   useEffect(() => {
@@ -33,7 +41,21 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) SplashScreen.hideAsync();
+    if (!loaded) return;
+    SplashScreen.hideAsync();
+  }, [loaded]);
+
+  /** Prime iOS/Android audio session so expo-speech and TTS are audible (not stuck after cold start). */
+  useEffect(() => {
+    if (!loaded) return;
+    void (async () => {
+      try {
+        await Audio.setIsEnabledAsync(true);
+        await audioModePlaybackSpeaker();
+      } catch {
+        /* non-fatal */
+      }
+    })();
   }, [loaded]);
 
   if (!loaded) return null;
@@ -44,10 +66,11 @@ export default function RootLayout() {
         screenOptions={{
           headerStyle: { backgroundColor: Colors.party.surface2 },
           headerTintColor: Colors.party.text,
-          headerTitleStyle: { fontWeight: '700' },
+          headerTitleStyle: { fontFamily: Font.title, fontWeight: '700', fontSize: 22 },
+          headerShadowVisible: false,
           contentStyle: { backgroundColor: Colors.party.surface },
         }}>
-        <Stack.Screen name="index" options={{ title: 'Babel Party', headerLargeTitle: false }} />
+        <Stack.Screen name="index" options={{ title: 'Babelingo', headerLargeTitle: false }} />
         <Stack.Screen name="how-it-works" options={{ title: 'How it works' }} />
         <Stack.Screen name="create-room" options={{ title: 'Create room' }} />
         <Stack.Screen name="lobby" options={{ title: 'Lobby' }} />

@@ -35,7 +35,15 @@ export async function playGoogleTts(text: string, languageBcp47: string): Promis
   await writeAsStringAsync(path, data.audioContent, { encoding: EncodingType.Base64 });
   await audioModePlaybackSpeaker();
 
-  const { sound } = await Audio.Sound.createAsync({ uri: path }, { shouldPlay: true });
+  const { sound } = await Audio.Sound.createAsync(
+    { uri: path },
+    { shouldPlay: true, volume: 1, isMuted: false },
+  );
+  try {
+    await sound.setVolumeAsync(1);
+  } catch {
+    /* ignore */
+  }
 
   try {
     await new Promise<void>((resolve, reject) => {

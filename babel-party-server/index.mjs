@@ -35,21 +35,37 @@ app.use(express.json({ limit: '512kb' }));
 function normalizeTranslationText(raw) {
   if (!raw || typeof raw !== 'string') return raw;
   let t = raw.trim().replace(/\+/g, ' ');
-  for (let i = 0; i < 5; i++) {
+  for (let k = 0; k < 6; k++) {
+    const next = t.replace(/%25([0-9A-Fa-f]{2})/gi, '%$1');
+    if (next === t) break;
+    t = next;
+  }
+  for (let i = 0; i < 10; i++) {
     if (!/%[0-9A-Fa-f]{2}/.test(t)) break;
     try {
-      const next = decodeURIComponent(t);
-      if (next === t) break;
-      t = next;
+      const decoded = decodeURIComponent(t);
+      if (decoded === t) break;
+      t = decoded;
     } catch {
-      break;
+      t = t
+        .replace(/%20/gi, ' ')
+        .replace(/%0[0-9a-f]/gi, ' ')
+        .replace(/%2[Cc]/g, ',')
+        .replace(/%2[Ee]/g, '.')
+        .replace(/%21/g, '!')
+        .replace(/%3[Ff]/g, '?')
+        .replace(/%3[Aa]/g, ':')
+        .replace(/%3[Bb]/g, ';');
     }
   }
   return t
+    .replace(/%20/gi, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -227,7 +243,7 @@ app.post('/process', upload.single('audio'), async (req, res) => {
 
     res.json({
       recognizedText,
-      reverseEnglish,
+      reverseEnglish: normalizeTranslationText(String(reverseEnglish ?? '')),
       closenessScore: null,
       sttSource,
     });

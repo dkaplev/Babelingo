@@ -1,7 +1,7 @@
-const accent = '#7c3aed';
-const accent2 = '#f97316';
-const surface = '#0f0a1a';
-const surface2 = '#1a1228';
+const accent = '#e45641';
+const accent2 = '#2f6f64';
+const surface = '#f4efe4';
+const surface2 = '#e8e0d4';
 
 export default {
   party: {
@@ -9,30 +9,29 @@ export default {
     accent2,
     surface,
     surface2,
-    text: '#f8fafc',
-    textMuted: '#94a3b8',
-    card: '#231835',
-    /** Hairlines and card borders */
-    borderSubtle: '#352b4a',
-    danger: '#fb7185',
-    success: '#34d399',
-    /** Scoreboard top ranks */
-    podiumGold: '#fbbf24',
-    podiumSilver: '#94a3b8',
-    podiumBronze: '#c2410c',
+    text: '#3a3128',
+    textMuted: '#6b5f52',
+    card: '#fffdf8',
+    borderSubtle: '#d4cbc0',
+    danger: '#c94c5c',
+    success: '#2f6f64',
+    podiumGold: '#e4a01a',
+    podiumSilver: '#8a8278',
+    podiumBronze: '#b45309',
+    doodleInk: '#2c261f',
   },
   light: {
-    text: '#0f172a',
-    background: '#faf5ff',
+    text: '#3a3128',
+    background: '#f4efe4',
     tint: accent,
-    tabIconDefault: '#94a3b8',
+    tabIconDefault: '#8a8278',
     tabIconSelected: accent,
   },
   dark: {
-    text: '#f8fafc',
-    background: surface,
-    tint: '#c4b5fd',
-    tabIconDefault: '#64748b',
-    tabIconSelected: '#c4b5fd',
+    text: '#3a3128',
+    background: '#f4efe4',
+    tint: accent2,
+    tabIconDefault: '#8a8278',
+    tabIconSelected: accent2,
   },
 };

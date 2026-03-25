@@ -1,27 +1,27 @@
 {
   "expo": {
-    "name": "babel-party",
-    "slug": "babel-party",
+    "name": "Babelingo",
+    "slug": "babelingo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "babelparty",
-    "userInterfaceStyle": "automatic",
+    "scheme": "babelingo",
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#f4efe4"
     },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Babel Party records your phrase imitation for the Echo Translator reveal."
+        "NSMicrophoneUsageDescription": "Babelingo records your phrase imitation for the Echo Translator reveal."
       }
     },
     "android": {
       "permissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#f4efe4",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"

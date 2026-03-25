@@ -1,5 +1,6 @@
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
+import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { currentPlayer, useGameStore } from '@/lib/gameStore';
 import { languageByCode } from '@/lib/languages';
@@ -92,9 +93,10 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', paddingTop: 8 },
   spinner: { marginTop: 32, marginBottom: 24 },
   note: {
+    fontFamily: Font.body,
     color: Colors.party.textMuted,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 24,
     textAlign: 'center',
     maxWidth: 280,
   },

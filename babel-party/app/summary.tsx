@@ -1,6 +1,7 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
+import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { useRouter } from 'expo-router';
@@ -80,20 +81,20 @@ export default function SummaryScreen() {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.party.card,
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 18,
-    borderWidth: 1,
-    borderColor: Colors.party.borderSubtle,
+    borderWidth: 3,
+    borderColor: Colors.party.doodleInk,
   },
   kicker: {
+    fontFamily: Font.bodyBold,
     color: Colors.party.accent2,
-    fontWeight: '800',
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  hero: { color: Colors.party.text, fontSize: 28, fontWeight: '900', marginTop: 8 },
-  body: { color: Colors.party.text, fontSize: 16, lineHeight: 24, marginTop: 8, fontStyle: 'italic' },
-  sub: { color: Colors.party.textMuted, marginTop: 10, fontSize: 14, lineHeight: 20 },
-  footerNote: { marginTop: 28, color: Colors.party.textMuted, fontSize: 13, lineHeight: 20 },
+  hero: { fontFamily: Font.title, color: Colors.party.doodleInk, fontSize: 32, marginTop: 8 },
+  body: { fontFamily: Font.body, color: Colors.party.text, fontSize: 17, lineHeight: 26, marginTop: 8, fontStyle: 'italic' },
+  sub: { fontFamily: Font.body, color: Colors.party.textMuted, marginTop: 10, fontSize: 15, lineHeight: 22 },
+  footerNote: { fontFamily: Font.body, marginTop: 28, color: Colors.party.textMuted, fontSize: 14, lineHeight: 22 },
 });

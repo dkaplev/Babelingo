@@ -1,6 +1,7 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
+import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { useRouter } from 'expo-router';
@@ -65,19 +66,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.party.card,
     padding: 14,
-    borderRadius: 16,
+    borderRadius: 18,
     gap: 12,
-    borderWidth: 1,
-    borderColor: Colors.party.borderSubtle,
+    borderWidth: 3,
+    borderColor: Colors.party.doodleInk,
   },
-  rowFirst: { borderLeftWidth: 4, borderLeftColor: Colors.party.podiumGold },
-  rowSecond: { borderLeftWidth: 4, borderLeftColor: Colors.party.podiumSilver },
-  rowThird: { borderLeftWidth: 4, borderLeftColor: Colors.party.podiumBronze },
-  rank: { color: Colors.party.textMuted, fontWeight: '800', width: 26, fontSize: 15 },
-  rankLead: { color: Colors.party.podiumGold, fontSize: 17 },
-  name: { color: Colors.party.text, fontSize: 17, fontWeight: '700' },
-  nameLead: { fontSize: 18 },
-  team: { color: Colors.party.textMuted, fontSize: 12, marginTop: 2 },
-  pts: { color: Colors.party.success, fontSize: 18, fontWeight: '900' },
-  ptsLead: { fontSize: 22 },
+  rowFirst: { borderLeftWidth: 6, borderLeftColor: Colors.party.podiumGold },
+  rowSecond: { borderLeftWidth: 6, borderLeftColor: Colors.party.podiumSilver },
+  rowThird: { borderLeftWidth: 6, borderLeftColor: Colors.party.podiumBronze },
+  rank: { fontFamily: Font.bodyBold, color: Colors.party.textMuted, width: 28, fontSize: 16 },
+  rankLead: { color: Colors.party.podiumGold, fontSize: 20 },
+  name: { fontFamily: Font.bodyBold, color: Colors.party.text, fontSize: 18 },
+  nameLead: { fontSize: 20 },
+  team: { fontFamily: Font.body, color: Colors.party.textMuted, fontSize: 13, marginTop: 2 },
+  pts: { fontFamily: Font.title, color: Colors.party.success, fontSize: 22 },
+  ptsLead: { fontSize: 26 },
 });

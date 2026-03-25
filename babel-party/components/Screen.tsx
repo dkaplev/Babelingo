@@ -1,6 +1,7 @@
 import Colors from '@/constants/Colors';
+import { Font } from '@/constants/Typography';
 import { ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function Screen(props: {
@@ -18,7 +19,11 @@ export function Screen(props: {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        {title ? <Text style={styles.title}>{title}</Text> : null}
+        {title ? (
+          <Text style={styles.title} accessibilityRole="header">
+            {title}
+          </Text>
+        ) : null}
         {subtitle ? (
           <Text style={subtitleVariant === 'highlight' ? styles.subtitleHighlight : styles.subtitle}>
             {subtitle}
@@ -35,32 +40,35 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.party.surface },
   scroll: { paddingHorizontal: 22, paddingBottom: 36 },
   title: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: Colors.party.text,
-    marginBottom: 10,
-    letterSpacing: -0.6,
+    fontFamily: Font.title,
+    fontSize: 36,
+    color: Colors.party.doodleInk,
+    marginBottom: 8,
+    letterSpacing: -0.5,
+    transform: [{ rotate: Platform.OS === 'ios' ? '-0.8deg' : '0deg' }],
   },
   subtitle: {
-    fontSize: 16,
+    fontFamily: Font.body,
+    fontSize: 17,
     color: Colors.party.textMuted,
     marginBottom: 22,
     lineHeight: 24,
   },
   subtitleHighlight: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontFamily: Font.bodyBold,
+    fontSize: 18,
     color: Colors.party.accent2,
     marginBottom: 22,
-    lineHeight: 24,
+    lineHeight: 26,
   },
   body: { flexGrow: 1 },
   footer: {
     paddingHorizontal: 22,
-    paddingTop: 12,
-    paddingBottom: 20,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 14,
+    paddingBottom: 22,
+    borderTopWidth: 3,
     borderTopColor: Colors.party.borderSubtle,
+    borderStyle: Platform.OS === 'android' ? 'solid' : 'dashed',
     backgroundColor: Colors.party.surface,
   },
 });

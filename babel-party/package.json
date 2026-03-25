@@ -1,5 +1,5 @@
 {
-  "name": "babel-party",
+  "name": "babelingo",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "repository": {
@@ -13,6 +13,8 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo-google-fonts/caveat": "^0.4.2",
+    "@expo-google-fonts/kalam": "^0.4.1",
     "@react-navigation/native": "^7.1.8",
     "expo": "~54.0.0",
     "expo-av": "^16.0.8",

@@ -1,6 +1,7 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
+import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { useRouter } from 'expo-router';
@@ -58,17 +59,18 @@ export default function LobbyScreen() {
 }
 
 const styles = StyleSheet.create({
-  hint: { color: Colors.party.textMuted, marginBottom: 16 },
+  hint: { fontFamily: Font.body, color: Colors.party.textMuted, marginBottom: 16, fontSize: 16 },
   field: { marginBottom: 12 },
-  label: { color: Colors.party.textMuted, fontSize: 12, fontWeight: '700', marginBottom: 6 },
+  label: { fontFamily: Font.bodyBold, color: Colors.party.textMuted, fontSize: 12, marginBottom: 6 },
   input: {
+    fontFamily: Font.body,
     backgroundColor: Colors.party.card,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: Colors.party.text,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: Colors.party.borderSubtle,
+    fontSize: 17,
+    borderWidth: 3,
+    borderColor: Colors.party.doodleInk,
   },
 });

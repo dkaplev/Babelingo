@@ -1,6 +1,7 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
+import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { Link, useRouter } from 'expo-router';
@@ -17,7 +18,7 @@ export default function HomeScreen() {
 
   return (
     <Screen
-      title="Babel Party"
+      title="Babelingo"
       subtitle="Hear a wild phrase, repeat the chaos, watch English melt — one phone, the whole room.">
       <View style={styles.hero}>
         <Text style={styles.tagline}>Telephone × karaoke × translation</Text>
@@ -47,11 +48,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 16,
     backgroundColor: Colors.party.card,
-    borderWidth: 1,
-    borderColor: Colors.party.borderSubtle,
+    borderWidth: 3,
+    borderColor: Colors.party.doodleInk,
   },
-  tagline: { color: Colors.dark.tint, fontSize: 16, fontWeight: '600', lineHeight: 22 },
+  tagline: { fontFamily: Font.bodyBold, color: Colors.party.accent2, fontSize: 17, lineHeight: 24 },
   cta: { marginBottom: 12 },
   linkWrap: { marginTop: 16, alignSelf: 'center', padding: 8 },
-  link: { color: Colors.party.accent, fontSize: 16, fontWeight: '600' },
+  link: { fontFamily: Font.bodyBold, color: Colors.party.accent, fontSize: 17 },
 });

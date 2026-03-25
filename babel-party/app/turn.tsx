@@ -1,6 +1,7 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
+import { Font } from '@/constants/Typography';
 import { audioModePlaybackSpeaker, audioModeRecording } from '@/lib/audioMode';
 import { MAX_PHRASE_PLAYS, currentPlayer, useGameStore } from '@/lib/gameStore';
 import { languageByCode } from '@/lib/languages';
@@ -102,23 +103,26 @@ export default function TurnScreen() {
     if (!translatedText || !lang) return;
     if (listensRemaining <= 0) return;
     Speech.stop();
+    const speakLocal = async () => {
+      await audioModePlaybackSpeaker();
+      // Brief pause lets the session switch complete on iOS before Speech starts
+      await new Promise((r) => setTimeout(r, 80));
+      Speech.speak(translatedText, {
+        language: lang.speechLocale,
+        volume: 1,
+        pitch: 1,
+        ...(Platform.OS === 'ios' ? { rate: 0.96 } : {}),
+      });
+    };
     try {
       if (useGoogleCloudTts()) {
         await playGoogleTts(translatedText, lang.speechLocale);
       } else {
-        await audioModePlaybackSpeaker();
-        Speech.speak(translatedText, {
-          language: lang.speechLocale,
-          ...(Platform.OS === 'ios' ? { rate: 0.96 } : {}),
-        });
+        await speakLocal();
       }
       nextListenConsumed();
     } catch {
-      await audioModePlaybackSpeaker();
-      Speech.speak(translatedText, {
-        language: lang.speechLocale,
-        ...(Platform.OS === 'ios' ? { rate: 0.96 } : {}),
-      });
+      await speakLocal();
       nextListenConsumed();
     }
   };
@@ -261,36 +265,38 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.party.card,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 18,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.party.borderSubtle,
+    borderWidth: 3,
+    borderColor: Colors.party.doodleInk,
   },
-  whisper: { color: Colors.party.textMuted, fontSize: 12, fontWeight: '700', marginBottom: 6 },
-  en: { color: Colors.party.text, fontSize: 18, lineHeight: 24, fontWeight: '600' },
-  muted: { color: Colors.party.textMuted, fontSize: 16 },
-  mutedSmall: { color: Colors.party.textMuted, marginTop: 10, fontSize: 13 },
+  whisper: { fontFamily: Font.bodyBold, color: Colors.party.textMuted, fontSize: 12, marginBottom: 6 },
+  en: { fontFamily: Font.body, color: Colors.party.text, fontSize: 19, lineHeight: 26 },
+  muted: { fontFamily: Font.body, color: Colors.party.textMuted, fontSize: 16 },
+  mutedSmall: { fontFamily: Font.body, color: Colors.party.textMuted, marginTop: 10, fontSize: 14 },
   recordBtn: {
     marginTop: 8,
     padding: 18,
-    borderRadius: 16,
+    borderRadius: 20,
     backgroundColor: Colors.party.surface2,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.party.accent,
+    borderWidth: 3,
+    borderColor: Colors.party.doodleInk,
   },
   recordActive: { borderColor: Colors.party.danger, backgroundColor: Colors.party.card },
-  recordLabel: { color: Colors.party.text, fontWeight: '800', fontSize: 17 },
+  recordLabel: { fontFamily: Font.bodyBold, color: Colors.party.doodleInk, fontSize: 18 },
   warn: {
+    fontFamily: Font.body,
     color: Colors.party.danger,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
     marginBottom: 12,
   },
   hint: {
+    fontFamily: Font.body,
     color: Colors.party.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 20,
     marginBottom: 12,
   },
 });
