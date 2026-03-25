@@ -1,0 +1,11 @@
+---
+description: After code changes in this repo, commit and push so Render/deploy stays current.
+alwaysApply: true
+---
+
+# Push to GitHub after changes
+
+When a task edits files in this repository:
+
+1. Run `git status` from the repo root; never commit `.env` or secrets.
+2. `git add`, `git commit` with a clear message, and `git push origin main` (or the deployment branch) in the same session unless the user asks not to push.
