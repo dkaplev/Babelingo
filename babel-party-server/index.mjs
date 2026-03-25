@@ -161,8 +161,10 @@ async function googleSpeechToText(audioBuffer, languageCode) {
     config: {
       encoding: 'LINEAR16',
       sampleRateHertz: rate,
+      /** Single fixed locale for the round — never set alternativeLanguageCodes (no language guessing). */
       languageCode: locale,
       enableAutomaticPunctuation: true,
+      maxAlternatives: 1,
     },
     audio: { content: audioBuffer.toString('base64') },
   };
@@ -242,15 +244,17 @@ app.post('/process', upload.single('audio'), async (req, res) => {
       sttSource = 'mock';
     }
 
+    /** Round language only for translate source (ISO-style code from the app, e.g. de, ja). */
+    const translateSource = languageCode;
     let reverseEnglish;
     if (GOOGLE_KEY) {
       try {
-        reverseEnglish = await googleTranslate(recognizedText, languageCode, 'en');
+        reverseEnglish = await googleTranslate(recognizedText, translateSource, 'en');
       } catch {
-        reverseEnglish = await myMemoryTranslate(recognizedText, `${languageCode}|en`);
+        reverseEnglish = await myMemoryTranslate(recognizedText, `${translateSource}|en`);
       }
     } else {
-      reverseEnglish = await myMemoryTranslate(recognizedText, `${languageCode}|en`);
+      reverseEnglish = await myMemoryTranslate(recognizedText, `${translateSource}|en`);
     }
 
     res.json({

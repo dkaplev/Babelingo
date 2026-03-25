@@ -12,7 +12,7 @@ import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, InteractionManager, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function TurnScreen() {
   const router = useRouter();
@@ -93,11 +93,13 @@ export default function TurnScreen() {
     };
   }, []);
 
-  /** iOS routes TTS to the earpiece while `allowsRecordingIOS` is true — reset after handoff. */
+  /** Warm playback session after handoff so first “Play” isn’t silent (iOS session timing). */
   useEffect(() => {
-    if (handoffDone) {
+    if (!handoffDone) return;
+    const id = setTimeout(() => {
       void audioModePlaybackSpeaker();
-    }
+    }, Platform.OS === 'ios' ? 240 : 100);
+    return () => clearTimeout(id);
   }, [handoffDone]);
 
   const speakDeviceTtsUntilDone = (text: string, speechLocale: string) =>
@@ -133,12 +135,12 @@ export default function TurnScreen() {
           await playGoogleTts(translatedText, lang.speechLocale);
         } catch {
           await audioModePlaybackSpeaker();
-          await new Promise((r) => setTimeout(r, 80));
+          await new Promise<void>((res) => InteractionManager.runAfterInteractions(() => res()));
           await speakDeviceTtsUntilDone(translatedText, lang.speechLocale);
         }
       } else {
         await audioModePlaybackSpeaker();
-        await new Promise((r) => setTimeout(r, 80));
+        await new Promise<void>((res) => InteractionManager.runAfterInteractions(() => res()));
         await speakDeviceTtsUntilDone(translatedText, lang.speechLocale);
       }
       nextListenConsumed();
@@ -183,6 +185,7 @@ export default function TurnScreen() {
         tick.current = null;
       }
       await audioModePlaybackSpeaker();
+      await new Promise((r) => setTimeout(r, Platform.OS === 'ios' ? 90 : 40));
     }
   };
 

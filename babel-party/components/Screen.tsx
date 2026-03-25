@@ -1,3 +1,4 @@
+import { NesBackground } from '@/components/NesBackground';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { ReactNode } from 'react';
@@ -14,30 +15,39 @@ export function Screen(props: {
 }) {
   const { title, subtitle, subtitleVariant = 'default', children, footer } = props;
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
-        {title ? (
-          <Text style={styles.title} accessibilityRole="header">
-            {title}
-          </Text>
-        ) : null}
-        {subtitle ? (
-          <Text style={subtitleVariant === 'highlight' ? styles.subtitleHighlight : styles.subtitle}>
-            {subtitle}
-          </Text>
-        ) : null}
-        <View style={styles.body}>{children}</View>
-      </ScrollView>
-      {footer ? <View style={styles.footer}>{footer}</View> : null}
-    </SafeAreaView>
+    <View style={styles.root}>
+      <NesBackground />
+      <View style={styles.bgOverlay} pointerEvents="none" />
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          {title ? (
+            <Text style={styles.title} accessibilityRole="header">
+              {title}
+            </Text>
+          ) : null}
+          {subtitle ? (
+            <Text style={subtitleVariant === 'highlight' ? styles.subtitleHighlight : styles.subtitle}>
+              {subtitle}
+            </Text>
+          ) : null}
+          <View style={styles.body}>{children}</View>
+        </ScrollView>
+        {footer ? <View style={styles.footer}>{footer}</View> : null}
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.party.surface },
+  root: { flex: 1, backgroundColor: Colors.party.surface },
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(26, 27, 75, 0.88)',
+  },
+  safe: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: 22, paddingBottom: 36 },
   title: {
     fontFamily: Font.title,
