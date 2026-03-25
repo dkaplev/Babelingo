@@ -1,0 +1,8 @@
+GitHub: https://github.com/dkaplev/Babelingo.git
+
+Secrets (never commit):
+- Put `GOOGLE_CLOUD_API_KEY` in `babel-party-server/.env` (copy from `env.example`).
+- Put `EXPO_PUBLIC_PIPELINE_URL` in `babel-party/.env` (copy from `.env.example`).
+If an API key was ever stored in git or shared, rotate it in Google Cloud Console → Credentials.
+
+Hosting: see `Babelingo/DEPLOY.md` (Render / Fly / Cloud Run + EAS Build).

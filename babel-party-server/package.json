@@ -1,0 +1,17 @@
+{
+  "name": "babel-party-server",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.2"
+  }
+}

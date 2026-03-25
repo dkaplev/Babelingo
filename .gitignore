@@ -1,0 +1,21 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+babel-party/.env
+babel-party-server/.env
+
+# Dependencies
+node_modules/
+
+# Expo
+babel-party/.expo/
+babel-party/dist/
+babel-party/web-build/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*

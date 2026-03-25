@@ -1,0 +1,18 @@
+# https://render.com/docs/blueprint-spec
+# Deploy: connect repo → New Blueprint → select this file (server directory as root).
+services:
+  - type: web
+    name: babel-party-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GOOGLE_CLOUD_API_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        value: '*'
+      - key: LOG_ANALYTICS
+        value: '1'
