@@ -1,6 +1,6 @@
 /** Loaded in app/_layout.tsx — keys must match useFonts map. */
 export const Font = {
-  title: 'Caveat_700Bold',
-  body: 'Kalam_400Regular',
-  bodyBold: 'Kalam_700Bold',
+  title: 'PressStart2P_400Regular',
+  body: 'VT323_400Regular',
+  bodyBold: 'VT323_400Regular',
 } as const;

@@ -1,5 +1,5 @@
-import { Caveat_700Bold } from '@expo-google-fonts/caveat';
-import { Kalam_400Regular, Kalam_700Bold } from '@expo-google-fonts/kalam';
+import { PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
+import { VT323_400Regular } from '@expo-google-fonts/vt323';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -32,9 +32,8 @@ const navTheme = {
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    Caveat_700Bold,
-    Kalam_400Regular,
-    Kalam_700Bold,
+    PressStart2P_400Regular,
+    VT323_400Regular,
   });
 
   useEffect(() => {
@@ -68,7 +67,7 @@ export default function RootLayout() {
         screenOptions={{
           headerStyle: { backgroundColor: Colors.party.surface2 },
           headerTintColor: Colors.party.text,
-          headerTitleStyle: { fontFamily: Font.title, fontWeight: '700', fontSize: 22 },
+          headerTitleStyle: { fontFamily: Font.title, fontSize: 11 },
           headerShadowVisible: false,
           contentStyle: { backgroundColor: Colors.party.surface },
         }}>

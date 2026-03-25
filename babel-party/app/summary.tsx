@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  hero: { fontFamily: Font.title, color: Colors.party.accentPop, fontSize: 32, marginTop: 8 },
+  hero: { fontFamily: Font.title, color: Colors.party.accentPop, fontSize: 22, marginTop: 8, lineHeight: 30 },
   body: { fontFamily: Font.body, color: Colors.party.text, fontSize: 17, lineHeight: 26, marginTop: 8, fontStyle: 'italic' },
   sub: { fontFamily: Font.body, color: Colors.party.textMuted, marginTop: 10, fontSize: 15, lineHeight: 22 },
   footerNote: { fontFamily: Font.body, marginTop: 28, color: Colors.party.textMuted, fontSize: 14, lineHeight: 22 },

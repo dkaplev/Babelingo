@@ -15,10 +15,38 @@ export function useGoogleCloudTts(): boolean {
   );
 }
 
-/** Synthesize via babel-party-server (Google Cloud TTS) and play through the loudspeaker. */
+type ActiveTts = { sound: Audio.Sound; path: string };
+let activeTts: ActiveTts | null = null;
+
+/** Stop server TTS playback (e.g. before recording) so audio does not bleed into the mic phase. */
+export async function stopPipelineTtsPlayback(): Promise<void> {
+  const cur = activeTts;
+  activeTts = null;
+  if (!cur) return;
+  try {
+    const st = await cur.sound.getStatusAsync();
+    if (st.isLoaded) await cur.sound.stopAsync();
+  } catch {
+    /* ignore */
+  }
+  try {
+    await cur.sound.unloadAsync();
+  } catch {
+    /* ignore */
+  }
+  try {
+    await deleteAsync(cur.path, { idempotent: true });
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Synthesize via API (Google Cloud TTS) and play through the loudspeaker. */
 export async function playGoogleTts(text: string, languageBcp47: string): Promise<void> {
   const base = getPipelineBaseUrl();
   if (!base) throw new Error('missing_pipeline_url');
+  await stopPipelineTtsPlayback();
+
   const res = await fetch(`${base}/tts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -45,6 +73,7 @@ export async function playGoogleTts(text: string, languageBcp47: string): Promis
     /* ignore */
   }
 
+  activeTts = { sound, path };
   try {
     await new Promise<void>((resolve, reject) => {
       const t = setTimeout(() => reject(new Error('tts_playback_timeout')), 120_000);
@@ -57,7 +86,12 @@ export async function playGoogleTts(text: string, languageBcp47: string): Promis
       });
     });
   } finally {
-    await sound.unloadAsync();
+    if (activeTts?.sound === sound) activeTts = null;
+    try {
+      await sound.unloadAsync();
+    } catch {
+      /* ignore */
+    }
     try {
       await deleteAsync(path, { idempotent: true });
     } catch {

@@ -79,6 +79,6 @@ const styles = StyleSheet.create({
   name: { fontFamily: Font.bodyBold, color: Colors.party.text, fontSize: 18 },
   nameLead: { fontSize: 20 },
   team: { fontFamily: Font.body, color: Colors.party.textMuted, fontSize: 13, marginTop: 2 },
-  pts: { fontFamily: Font.title, color: Colors.party.success, fontSize: 22 },
-  ptsLead: { fontSize: 26 },
+  pts: { fontFamily: Font.title, color: Colors.party.success, fontSize: 18 },
+  ptsLead: { fontSize: 22 },
 });

@@ -70,8 +70,8 @@ export default function RevealScreen() {
         {lastResult.usedMockPipeline ? (
           <Text style={styles.metaText}>
             {lastResult.recognizedText
-              ? 'Speech used a demo fallback. For live transcription, run the API with GOOGLE_CLOUD_API_KEY.'
-              : 'Offline / demo pipeline. Set EXPO_PUBLIC_PIPELINE_URL to your deployed API with a Google key.'}
+              ? 'STT used a demo fallback. The Google key lives only on the API host: set GOOGLE_CLOUD_API_KEY on Render (exact spelling). Visit your API /health — "google" should be true.'
+              : 'Pipeline could not run live STT. Use EXPO_PUBLIC_PIPELINE_URL in the app; put GOOGLE_CLOUD_API_KEY only on the server (.env locally, Environment on Render), not in babel-party.'}
           </Text>
         ) : null}
       </View>
@@ -107,8 +107,8 @@ const styles = StyleSheet.create({
   big: {
     fontFamily: Font.title,
     color: Colors.party.accentPop,
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 24,
+    lineHeight: 32,
     marginTop: 10,
   },
   meta: { marginTop: 8, gap: 8 },
@@ -121,6 +121,6 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: Colors.party.neonStroke,
   },
-  scoreMain: { fontFamily: Font.title, color: Colors.party.success, fontSize: 28 },
+  scoreMain: { fontFamily: Font.title, color: Colors.party.success, fontSize: 22 },
   scoreSub: { fontFamily: Font.body, color: Colors.party.textMuted, marginTop: 8, fontSize: 14, lineHeight: 20 },
 });

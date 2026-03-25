@@ -6,7 +6,19 @@ import multer from 'multer';
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024 } });
 const PORT = process.env.PORT ?? 3847;
-const GOOGLE_KEY = process.env.GOOGLE_CLOUD_API_KEY ?? '';
+
+/** Render/Linux env names are case-sensitive; accept a few common variants. */
+function readGoogleCloudApiKey() {
+  const e = process.env;
+  const candidates = ['GOOGLE_CLOUD_API_KEY', 'Google_Cloud_API_Key', 'google_cloud_api_key'];
+  for (const k of candidates) {
+    const v = e[k];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return '';
+}
+
+const GOOGLE_KEY = readGoogleCloudApiKey();
 
 const STT_LOCALE = {
   es: 'es-ES',

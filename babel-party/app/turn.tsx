@@ -6,7 +6,7 @@ import { audioModePlaybackSpeaker, audioModeRecording } from '@/lib/audioMode';
 import { MAX_PHRASE_PLAYS, currentPlayer, useGameStore } from '@/lib/gameStore';
 import { languageByCode } from '@/lib/languages';
 import { RECORDING_OPTIONS_GOOGLE_STT } from '@/lib/recordingOptions';
-import { playGoogleTts, useGoogleCloudTts } from '@/lib/playGoogleTts';
+import { playGoogleTts, stopPipelineTtsPlayback, useGoogleCloudTts } from '@/lib/playGoogleTts';
 import { translateEnToWithMeta, type TranslationSource } from '@/lib/translate';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
@@ -32,6 +32,7 @@ export default function TurnScreen() {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [phrasePlaybackBusy, setPhrasePlaybackBusy] = useState(false);
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const player = useGameStore((s) => currentPlayer(s));
@@ -99,38 +100,61 @@ export default function TurnScreen() {
     }
   }, [handoffDone]);
 
-  const onListen = async () => {
-    if (!translatedText || !lang) return;
-    if (listensRemaining <= 0) return;
-    Speech.stop();
-    const speakLocal = async () => {
-      await audioModePlaybackSpeaker();
-      // Brief pause lets the session switch complete on iOS before Speech starts
-      await new Promise((r) => setTimeout(r, 80));
-      Speech.speak(translatedText, {
-        language: lang.speechLocale,
+  const speakDeviceTtsUntilDone = (text: string, speechLocale: string) =>
+    new Promise<void>((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      Speech.speak(text, {
+        language: speechLocale,
         volume: 1,
         pitch: 1,
         ...(Platform.OS === 'ios' ? { rate: 0.96 } : {}),
+        onDone: finish,
+        onStopped: finish,
+        onError: finish,
       });
-    };
+      setTimeout(finish, 120_000);
+    });
+
+  const onListen = async () => {
+    if (!translatedText || !lang) return;
+    if (listensRemaining <= 0) return;
+    if (phrasePlaybackBusy) return;
+    Speech.stop();
+    await stopPipelineTtsPlayback();
+    setPhrasePlaybackBusy(true);
     try {
       if (useGoogleCloudTts()) {
-        await playGoogleTts(translatedText, lang.speechLocale);
+        try {
+          await playGoogleTts(translatedText, lang.speechLocale);
+        } catch {
+          await audioModePlaybackSpeaker();
+          await new Promise((r) => setTimeout(r, 80));
+          await speakDeviceTtsUntilDone(translatedText, lang.speechLocale);
+        }
       } else {
-        await speakLocal();
+        await audioModePlaybackSpeaker();
+        await new Promise((r) => setTimeout(r, 80));
+        await speakDeviceTtsUntilDone(translatedText, lang.speechLocale);
       }
       nextListenConsumed();
-    } catch {
-      await speakLocal();
-      nextListenConsumed();
+    } finally {
+      setPhrasePlaybackBusy(false);
     }
   };
 
   const startRecording = async () => {
+    if (phrasePlaybackBusy) return;
+    Speech.stop();
+    await stopPipelineTtsPlayback();
     try {
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) return;
+      await new Promise((r) => setTimeout(r, 50));
       await audioModeRecording();
       const rec = new Audio.Recording();
       await rec.prepareToRecordAsync(RECORDING_OPTIONS_GOOGLE_STT);
@@ -231,7 +255,11 @@ export default function TurnScreen() {
           {translationSource === 'offline' || translationLoadError ? (
             <PrimaryButton title="Retry translation" onPress={retryTranslation} style={{ marginBottom: 12 }} />
           ) : null}
-          <PrimaryButton title="Play foreign phrase" onPress={() => void onListen()} disabled={listensRemaining <= 0} />
+          <PrimaryButton
+            title="Play foreign phrase"
+            onPress={() => void onListen()}
+            disabled={listensRemaining <= 0 || phrasePlaybackBusy}
+          />
           {listensRemaining > 0 ? (
             <PrimaryButton
               variant="ghost"
@@ -247,7 +275,10 @@ export default function TurnScreen() {
           <View style={{ height: 20 }} />
 
           {!isRecording ? (
-            <Pressable style={styles.recordBtn} onPress={() => void startRecording()}>
+            <Pressable
+              style={[styles.recordBtn, phrasePlaybackBusy && styles.recordBtnDisabled]}
+              onPress={() => void startRecording()}
+              disabled={phrasePlaybackBusy}>
               <Text style={styles.recordLabel}>● Record your attempt</Text>
             </Pressable>
           ) : (
@@ -284,6 +315,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.party.neonStroke,
   },
   recordActive: { borderColor: Colors.party.danger, backgroundColor: Colors.party.card },
+  recordBtnDisabled: { opacity: 0.4 },
   recordLabel: { fontFamily: Font.bodyBold, color: Colors.party.accentPop, fontSize: 18 },
   warn: {
     fontFamily: Font.body,

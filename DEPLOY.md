@@ -28,7 +28,7 @@ The server holds **Google Cloud credentials** and exposes `/translate`, `/tts`, 
   This repo uses **npm** (`package-lock.json`), not Yarn, unless you add Yarn yourself.
 
 3. Set environment variables:
-   - `GOOGLE_CLOUD_API_KEY` — secret (dashboard only).
+   - `GOOGLE_CLOUD_API_KEY` — secret (dashboard only). **Exact name** (all caps, underscores); Render/Linux will not read `Google_Cloud_API_Key` unless you duplicate it. After deploy, open `https://your-service.onrender.com/health` and confirm `"google": true`.
    - `CORS_ORIGIN` — start with `*` for testing; later narrow to your app’s origins if you add a web client.
    - `LOG_ANALYTICS=1` — optional; logs JSON lines for `POST /analytics`.
 4. Render assigns **`PORT`** automatically; the app already uses `process.env.PORT`.
