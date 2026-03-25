@@ -2,17 +2,28 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
+import { trackEvent } from '@/lib/analytics';
 import { audioModePlaybackSpeaker, audioModeRecording } from '@/lib/audioMode';
 import { MAX_PHRASE_PLAYS, currentPlayer, useGameStore } from '@/lib/gameStore';
 import { languageByCode } from '@/lib/languages';
 import { RECORDING_OPTIONS_GOOGLE_STT } from '@/lib/recordingOptions';
+import { forceDevicePhraseTts, getPipelineBaseUrl } from '@/lib/env';
 import { playGoogleTts, stopPipelineTtsPlayback, useGoogleCloudTts } from '@/lib/playGoogleTts';
 import { translateEnToWithMeta, type TranslationSource } from '@/lib/translate';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, InteractionManager, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  InteractionManager,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 export default function TurnScreen() {
   const router = useRouter();
@@ -24,6 +35,7 @@ export default function TurnScreen() {
   const nextListenConsumed = useGameStore((s) => s.nextListenConsumed);
   const skipExtraPhrasePlays = useGameStore((s) => s.skipExtraPhrasePlays);
   const setRecordingUri = useGameStore((s) => s.setRecordingUri);
+  const resetSession = useGameStore((s) => s.resetSession);
 
   const [handoffDone, setHandoffDone] = useState(false);
   const [loadingTts, setLoadingTts] = useState(true);
@@ -114,7 +126,13 @@ export default function TurnScreen() {
         language: speechLocale,
         volume: 1,
         pitch: 1,
-        ...(Platform.OS === 'ios' ? { rate: 0.96 } : {}),
+        ...(Platform.OS === 'ios'
+          ? {
+              rate: 1,
+              /** Separate system TTS session — avoids routing to the earpiece with the app’s PlayAndRecord session. */
+              useApplicationAudioSession: false,
+            }
+          : {}),
         onDone: finish,
         onStopped: finish,
         onError: finish,
@@ -130,15 +148,26 @@ export default function TurnScreen() {
     await stopPipelineTtsPlayback();
     setPhrasePlaybackBusy(true);
     try {
-      if (useGoogleCloudTts()) {
+      let played = false;
+      const pipeline = getPipelineBaseUrl();
+      const preferPipeline = Boolean(pipeline) && !forceDevicePhraseTts();
+      if (preferPipeline) {
         try {
           await playGoogleTts(translatedText, lang.speechLocale);
+          played = true;
         } catch {
-          await audioModePlaybackSpeaker();
-          await new Promise<void>((res) => InteractionManager.runAfterInteractions(() => res()));
-          await speakDeviceTtsUntilDone(translatedText, lang.speechLocale);
+          /* fall through to device */
         }
-      } else {
+      }
+      if (!played && useGoogleCloudTts()) {
+        try {
+          await playGoogleTts(translatedText, lang.speechLocale);
+          played = true;
+        } catch {
+          /* fall through */
+        }
+      }
+      if (!played) {
         await audioModePlaybackSpeaker();
         await new Promise<void>((res) => InteractionManager.runAfterInteractions(() => res()));
         await speakDeviceTtsUntilDone(translatedText, lang.speechLocale);
@@ -148,6 +177,29 @@ export default function TurnScreen() {
       setPhrasePlaybackBusy(false);
     }
   };
+
+  const confirmMainMenu = () => {
+    Alert.alert('Leave game?', 'This clears the current session and returns home.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Main menu',
+        style: 'destructive',
+        onPress: () => {
+          Speech.stop();
+          void stopPipelineTtsPlayback();
+          trackEvent('turn_exit_main_menu');
+          resetSession();
+          router.replace('/');
+        },
+      },
+    ]);
+  };
+
+  const menuRow = (
+    <Pressable onPress={confirmMainMenu} style={styles.menuRow} hitSlop={8}>
+      <Text style={styles.menuText}>◀ MAIN MENU</Text>
+    </Pressable>
+  );
 
   const startRecording = async () => {
     if (phrasePlaybackBusy) return;
@@ -213,6 +265,7 @@ export default function TurnScreen() {
             onPress={() => setHandoffDone(true)}
           />
         }>
+        {menuRow}
         <View style={styles.card}>
           <Text style={styles.whisper}>English phrase — read aloud to the room</Text>
           <Text style={styles.en}>{roundPhrase.text}</Text>
@@ -233,6 +286,7 @@ export default function TurnScreen() {
           : 'Loading…'
       }
       footer={<PrimaryButton title="Submit turn" onPress={onSubmit} />}>
+      {menuRow}
       {translationLoadError ? (
         <Text style={styles.warn}>{translationLoadError}</Text>
       ) : null}
@@ -247,8 +301,8 @@ export default function TurnScreen() {
           Your server did not return a translation; using the public fallback translator (rate limits may apply).
         </Text>
       ) : null}
-      {!loadingTts && useGoogleCloudTts() ? (
-        <Text style={styles.hint}>Using Google Cloud TTS from your server (uses TTS quota).</Text>
+      {!loadingTts && getPipelineBaseUrl() && !forceDevicePhraseTts() ? (
+        <Text style={styles.hint}>Foreign phrase plays from your server when possible (loudspeaker-friendly).</Text>
       ) : null}
 
       {loadingTts ? (
@@ -334,4 +388,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 12,
   },
+  menuRow: { alignSelf: 'flex-start', marginBottom: 14, paddingVertical: 6, paddingRight: 12 },
+  menuText: { fontFamily: Font.bodyBold, color: Colors.party.accent2, fontSize: 16 },
 });

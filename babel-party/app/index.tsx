@@ -1,6 +1,5 @@
 import { NesPanel } from '@/components/NesPanel';
 import { PressStartPrompt } from '@/components/PressStartPrompt';
-import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
@@ -18,24 +17,21 @@ export default function HomeScreen() {
     trackEvent('session_start');
   }, []);
 
+  const startGame = () => {
+    resetSession();
+    trackEvent('tap_start_game');
+    router.push('/create-room');
+  };
+
   return (
     <Screen
       title="Babelingo"
       subtitle="Hear a wild phrase, repeat the chaos, watch English melt — one phone, the whole room.">
-      <PressStartPrompt />
+      <PressStartPrompt onPress={startGame} />
       <NesPanel style={styles.hero}>
         <Text style={styles.tagline}>TELEPHONE × KARAOKE × TRANSLATION</Text>
         <Text style={styles.copyHint}>Insert chaos. No quarters required.</Text>
       </NesPanel>
-      <PrimaryButton
-        title="START GAME"
-        onPress={() => {
-          resetSession();
-          trackEvent('tap_start_game');
-          router.push('/create-room');
-        }}
-        style={styles.cta}
-      />
       <Link href="/how-it-works" asChild>
         <Pressable style={styles.linkWrap}>
           <Text style={styles.link}>HOW IT WORKS</Text>
@@ -59,8 +55,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  cta: { marginBottom: 12 },
-  linkWrap: { marginTop: 16, alignSelf: 'center', padding: 8 },
+  linkWrap: { marginTop: 20, alignSelf: 'center', padding: 8 },
   link: { fontFamily: Font.bodyBold, color: Colors.party.accent, fontSize: 17 },
   copyright: {
     fontFamily: Font.title,

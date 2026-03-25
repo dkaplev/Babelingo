@@ -148,13 +148,8 @@ function wavSampleRateHertz(buf) {
   }
 }
 
-async function googleSpeechToText(audioBuffer, languageCode) {
-  if (!GOOGLE_KEY || !audioBuffer?.length) return null;
+async function googleSpeechRecognizeOnce(audioBuffer, languageCode) {
   const locale = STT_LOCALE[languageCode] ?? `${languageCode}-${languageCode.toUpperCase()}`;
-  if (!isWavPcm(audioBuffer)) {
-    console.warn('STT: expected 16-bit PCM WAV from the app; got non-WAV buffer — skipping Google STT');
-    return null;
-  }
   const rate = wavSampleRateHertz(audioBuffer) || 16000;
   const url = `https://speech.googleapis.com/v1/speech:recognize?key=${GOOGLE_KEY}`;
   const body = {
@@ -175,11 +170,38 @@ async function googleSpeechToText(audioBuffer, languageCode) {
   });
   const data = await res.json();
   if (!res.ok) {
-    console.error('speech error', data);
-    return null;
+    return { ok: false, status: res.status, transcript: null, data };
   }
   const t = data.results?.[0]?.alternatives?.[0]?.transcript;
-  return t ? normalizeTranslationText(String(t)) : null;
+  return {
+    ok: true,
+    status: res.status,
+    transcript: t ? normalizeTranslationText(String(t)) : null,
+    data,
+  };
+}
+
+async function googleSpeechToText(audioBuffer, languageCode) {
+  if (!GOOGLE_KEY || !audioBuffer?.length) return null;
+  if (!isWavPcm(audioBuffer)) {
+    console.warn('STT: expected 16-bit PCM WAV from the app; got non-WAV buffer — skipping Google STT');
+    return null;
+  }
+  const retryable = (status) => [429, 500, 502, 503, 504].includes(Number(status));
+  const maxAttempts = 3;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const r = await googleSpeechRecognizeOnce(audioBuffer, languageCode);
+    if (r.transcript) return r.transcript;
+    if (!r.ok && r.status && !retryable(r.status)) {
+      console.error('speech error', r.data);
+      break;
+    }
+    if (!r.ok) console.warn('STT attempt failed, retrying', r.status, attempt + 1);
+    if (attempt < maxAttempts - 1) {
+      await new Promise((res) => setTimeout(res, 400 * (attempt + 1)));
+    }
+  }
+  return null;
 }
 
 function mockRecognized(translatedForeign, languageCode, audioBuffer) {
