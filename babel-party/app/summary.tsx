@@ -29,7 +29,7 @@ export default function SummaryScreen() {
   return (
     <Screen
       title="That’s a wrap"
-      subtitle="Save the screenshots — these get better every time."
+      subtitle="Moments worth saving — the weird English only gets better each game."
       footer={
         <View style={{ gap: 10 }}>
           <PrimaryButton
@@ -71,7 +71,7 @@ export default function SummaryScreen() {
       ) : null}
 
       <Text style={styles.footerNote}>
-        Share the reveal screen next time — it’s built to read well on a mirrored TV.
+        Cast or mirror the reveal — big type and high contrast are built in for the room.
       </Text>
     </Screen>
   );
@@ -81,11 +81,19 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.party.card,
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: Colors.party.borderSubtle,
   },
-  kicker: { color: Colors.party.accent2, fontWeight: '800', fontSize: 12, textTransform: 'uppercase' },
-  hero: { color: Colors.party.text, fontSize: 28, fontWeight: '900', marginTop: 6 },
-  body: { color: Colors.party.text, fontSize: 16, lineHeight: 22, marginTop: 6 },
-  sub: { color: Colors.party.textMuted, marginTop: 8, fontSize: 14 },
-  footerNote: { marginTop: 24, color: Colors.party.textMuted, fontSize: 13, lineHeight: 18 },
+  kicker: {
+    color: Colors.party.accent2,
+    fontWeight: '800',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  hero: { color: Colors.party.text, fontSize: 28, fontWeight: '900', marginTop: 8 },
+  body: { color: Colors.party.text, fontSize: 16, lineHeight: 24, marginTop: 8, fontStyle: 'italic' },
+  sub: { color: Colors.party.textMuted, marginTop: 10, fontSize: 14, lineHeight: 20 },
+  footerNote: { marginTop: 28, color: Colors.party.textMuted, fontSize: 13, lineHeight: 20 },
 });

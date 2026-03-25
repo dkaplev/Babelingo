@@ -25,11 +25,28 @@ export default function InstructionsScreen() {
         />
       }>
       <View style={styles.card}>
-        <Text style={styles.rule}>
-          1. Tap play to hear the foreign phrase — up to three replays, or skip early when you are ready.
-        </Text>
-        <Text style={styles.rule}>2. Record your best impression. Messy is fine.</Text>
-        <Text style={styles.rule}>3. We transcribe & translate back for the reveal.</Text>
+        <View style={styles.ruleRow}>
+          <View style={styles.ruleNumWrap}>
+            <Text style={styles.ruleNum}>1</Text>
+          </View>
+          <Text style={styles.rule}>
+            Tap play to hear the foreign line — up to three replays, or skip when you are ready to say it.
+          </Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.ruleRow}>
+          <View style={styles.ruleNumWrap}>
+            <Text style={styles.ruleNum}>2</Text>
+          </View>
+          <Text style={styles.rule}>Record your impression. Rough and loud beats perfect and quiet.</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.ruleRow}>
+          <View style={styles.ruleNumWrap}>
+            <Text style={styles.ruleNum}>3</Text>
+          </View>
+          <Text style={styles.rule}>We transcribe and translate back — then the room sees the reveal.</Text>
+        </View>
       </View>
     </Screen>
   );
@@ -39,8 +56,25 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.party.card,
     borderRadius: 16,
-    padding: 16,
-    gap: 12,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: Colors.party.borderSubtle,
   },
-  rule: { color: Colors.party.text, fontSize: 16, lineHeight: 22 },
+  ruleRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
+  ruleNumWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.party.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ruleNum: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  rule: { flex: 1, color: Colors.party.text, fontSize: 16, lineHeight: 24 },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.party.borderSubtle,
+    marginVertical: 14,
+    marginLeft: 42,
+  },
 });

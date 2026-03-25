@@ -42,14 +42,14 @@ function Stepper(props: {
       <Text style={styles.stepperLabel}>{label}</Text>
       <View style={styles.stepperRow}>
         <Pressable
-          style={styles.stepperBtn}
+          style={[styles.stepperBtn, value <= min && styles.stepperBtnDisabled]}
           onPress={() => onChange(Math.max(min, value - 1))}
           disabled={value <= min}>
           <Text style={styles.stepperBtnText}>−</Text>
         </Pressable>
         <Text style={styles.stepperValue}>{value}</Text>
         <Pressable
-          style={styles.stepperBtn}
+          style={[styles.stepperBtn, value >= max && styles.stepperBtnDisabled]}
           onPress={() => onChange(Math.min(max, value + 1))}
           disabled={value >= max}>
           <Text style={styles.stepperBtnText}>+</Text>
@@ -177,7 +177,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.party.card,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.party.borderSubtle,
   },
+  stepperBtnDisabled: { opacity: 0.35 },
   stepperBtnText: { color: Colors.party.text, fontSize: 22, fontWeight: '700' },
   stepperValue: { color: Colors.party.text, fontSize: 20, fontWeight: '800', minWidth: 36, textAlign: 'center' },
   toggle: {
@@ -185,19 +188,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: Colors.party.card,
     borderWidth: 1,
-    borderColor: Colors.party.surface2,
+    borderColor: Colors.party.borderSubtle,
   },
-  toggleOn: { borderColor: Colors.party.accent },
+  toggleOn: { borderColor: Colors.party.accent, backgroundColor: Colors.party.surface2 },
   toggleText: { color: Colors.party.text, fontWeight: '700' },
   chips: { gap: 10 },
   chip: {
-    padding: 12,
-    borderRadius: 14,
+    padding: 14,
+    borderRadius: 16,
     backgroundColor: Colors.party.card,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: Colors.party.borderSubtle,
   },
-  chipOn: { borderColor: Colors.party.accent },
+  chipOn: { borderColor: Colors.party.accent, backgroundColor: Colors.party.surface2 },
   chipTitle: { color: Colors.party.text, fontWeight: '800', fontSize: 16 },
   chipHint: { color: Colors.party.textMuted, marginTop: 4, fontSize: 13 },
   rowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -206,7 +209,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 999,
     backgroundColor: Colors.party.card,
+    borderWidth: 1,
+    borderColor: Colors.party.borderSubtle,
   },
-  miniChipOn: { backgroundColor: Colors.party.accent2 },
+  miniChipOn: { backgroundColor: Colors.party.accent2, borderColor: Colors.party.accent2 },
   miniChipText: { color: Colors.party.text, fontWeight: '600', fontSize: 13 },
 });

@@ -36,7 +36,7 @@ export default function LobbyScreen() {
       title="Lobby"
       subtitle={`${settings.rounds} rounds · ${settings.difficulty} · ${settings.teamsEnabled ? 'Teams' : 'Solo scoring'}`}
       footer={<PrimaryButton title="Everyone’s in — start" onPress={onStart} />}>
-      <Text style={styles.hint}>Rename players so the room knows who’s up.</Text>
+      <Text style={styles.hint}>Rename everyone — scores and turns use these names out loud.</Text>
       {names.map((n, i) => (
         <View key={i} style={styles.field}>
           <Text style={styles.label}>{settings.teamsEnabled ? (i % 2 === 0 ? 'Team A' : 'Team B') : 'Player'}</Text>
@@ -68,5 +68,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: Colors.party.text,
     fontSize: 16,
+    borderWidth: 1,
+    borderColor: Colors.party.borderSubtle,
   },
 });

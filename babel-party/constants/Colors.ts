@@ -12,8 +12,14 @@ export default {
     text: '#f8fafc',
     textMuted: '#94a3b8',
     card: '#231835',
+    /** Hairlines and card borders */
+    borderSubtle: '#352b4a',
     danger: '#fb7185',
     success: '#34d399',
+    /** Scoreboard top ranks */
+    podiumGold: '#fbbf24',
+    podiumSilver: '#94a3b8',
+    podiumBronze: '#c2410c',
   },
   light: {
     text: '#0f172a',

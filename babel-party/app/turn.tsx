@@ -183,7 +183,7 @@ export default function TurnScreen() {
           />
         }>
         <View style={styles.card}>
-          <Text style={styles.whisper}>English phrase (read aloud)</Text>
+          <Text style={styles.whisper}>English phrase — read aloud to the room</Text>
           <Text style={styles.en}>{roundPhrase.text}</Text>
         </View>
         <Text style={styles.mutedSmall}>
@@ -260,9 +260,11 @@ export default function TurnScreen() {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.party.card,
-    padding: 14,
-    borderRadius: 14,
+    padding: 16,
+    borderRadius: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.party.borderSubtle,
   },
   whisper: { color: Colors.party.textMuted, fontSize: 12, fontWeight: '700', marginBottom: 6 },
   en: { color: Colors.party.text, fontSize: 18, lineHeight: 24, fontWeight: '600' },
@@ -270,13 +272,15 @@ const styles = StyleSheet.create({
   mutedSmall: { color: Colors.party.textMuted, marginTop: 10, fontSize: 13 },
   recordBtn: {
     marginTop: 8,
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: Colors.party.card,
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: Colors.party.surface2,
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.party.accent,
   },
-  recordActive: { borderWidth: 1, borderColor: Colors.party.danger },
-  recordLabel: { color: Colors.party.text, fontWeight: '800', fontSize: 16 },
+  recordActive: { borderColor: Colors.party.danger, backgroundColor: Colors.party.card },
+  recordLabel: { color: Colors.party.text, fontWeight: '800', fontSize: 17 },
   warn: {
     color: Colors.party.danger,
     fontSize: 14,

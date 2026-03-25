@@ -7,7 +7,7 @@ import { runEchoPipeline } from '@/lib/pipeline';
 import type { TurnResult } from '@/lib/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 const COPY = [
   'Consulting the language spirits…',
@@ -80,13 +80,22 @@ export default function ProcessingScreen() {
 
   return (
     <Screen title="Hold tight" subtitle={line}>
-      <ActivityIndicator size="large" color={Colors.party.accent} style={styles.spinner} />
-      <Text style={styles.note}>The room should hype the player while we crunch audio.</Text>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={Colors.party.accent} style={styles.spinner} />
+        <Text style={styles.note}>Hype the player — this usually takes a few seconds.</Text>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  spinner: { marginTop: 40, marginBottom: 20 },
-  note: { color: Colors.party.textMuted, fontSize: 14, lineHeight: 20 },
+  center: { alignItems: 'center', paddingTop: 8 },
+  spinner: { marginTop: 32, marginBottom: 24 },
+  note: {
+    color: Colors.party.textMuted,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+    maxWidth: 280,
+  },
 });

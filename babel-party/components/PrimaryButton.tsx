@@ -1,5 +1,5 @@
 import Colors from '@/constants/Colors';
-import { Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
 
 export function PrimaryButton(props: {
   title: string;
@@ -36,11 +36,24 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: Colors.party.accent,
+    minHeight: 52,
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.22,
+        shadowRadius: 6,
+      },
+      android: { elevation: 3 },
+    }),
   },
   ghost: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: Colors.party.textMuted,
+    borderColor: Colors.party.borderSubtle,
+    minHeight: 52,
+    justifyContent: 'center',
   },
   pressed: { opacity: 0.88 },
   disabled: { opacity: 0.45 },

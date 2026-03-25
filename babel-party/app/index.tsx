@@ -1,5 +1,6 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import Colors from '@/constants/Colors';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { Link, useRouter } from 'expo-router';
@@ -17,7 +18,7 @@ export default function HomeScreen() {
   return (
     <Screen
       title="Babel Party"
-      subtitle="Hear a wild phrase, repeat the chaos, watch English melt. Shared-phone party mode.">
+      subtitle="Hear a wild phrase, repeat the chaos, watch English melt — one phone, the whole room.">
       <View style={styles.hero}>
         <Text style={styles.tagline}>Telephone × karaoke × translation</Text>
       </View>
@@ -40,9 +41,17 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: { marginBottom: 28 },
-  tagline: { color: '#c4b5fd', fontSize: 16, fontWeight: '600' },
+  hero: {
+    marginBottom: 28,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    backgroundColor: Colors.party.card,
+    borderWidth: 1,
+    borderColor: Colors.party.borderSubtle,
+  },
+  tagline: { color: Colors.dark.tint, fontSize: 16, fontWeight: '600', lineHeight: 22 },
   cta: { marginBottom: 12 },
   linkWrap: { marginTop: 16, alignSelf: 'center', padding: 8 },
-  link: { color: '#a78bfa', fontSize: 16, fontWeight: '600' },
+  link: { color: Colors.party.accent, fontSize: 16, fontWeight: '600' },
 });

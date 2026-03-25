@@ -30,17 +30,17 @@ export default function HowItWorksScreen() {
 }
 
 const styles = StyleSheet.create({
-  list: { gap: 14 },
-  row: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  list: { gap: 16 },
+  row: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
   badge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: Colors.party.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeText: { color: '#fff', fontWeight: '800', fontSize: 14 },
-  step: { flex: 1, color: Colors.party.text, fontSize: 16, lineHeight: 22 },
-  note: { marginTop: 28, color: Colors.party.textMuted, fontSize: 14, lineHeight: 20 },
+  step: { flex: 1, color: Colors.party.text, fontSize: 16, lineHeight: 24 },
+  note: { marginTop: 28, color: Colors.party.textMuted, fontSize: 14, lineHeight: 22 },
 });
