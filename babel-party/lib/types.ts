@@ -1,5 +1,8 @@
 export type DifficultyPreset = 'chill' | 'spicy' | 'chaos';
 
+/** Which party game variant is active for the session. */
+export type AppGameId = 'echo_translator' | 'babel_phone' | 'reverse_audio';
+
 /** Regular = curated 7-round climb; Mayhem = random heat, phrases always 4+ words. */
 export type GameMode = 'regular' | 'mayhem';
 
@@ -35,6 +38,8 @@ export type RoomSettings = {
   /** Total rounds in the session (fixed arc; no longer chosen in UI). */
   rounds: number;
   gameMode: GameMode;
+  /** Party game: Echo Translator, Babel Phone (mutating chain), or Reverse Audio. */
+  appGame: AppGameId;
   difficulty: DifficultyPreset;
   category: PhraseCategory | 'mixed';
   languageCodes: string[];
@@ -45,6 +50,8 @@ export type SttMockReason = 'no_server_key' | 'no_recording' | 'bad_audio_format
 
 export type TurnResult = {
   roundNumber: number;
+  /** Order within the round (0-based) for Babel Phone chain display. */
+  turnOrderInRound: number;
   playerId: string;
   playerName: string;
   phraseOriginal: string;

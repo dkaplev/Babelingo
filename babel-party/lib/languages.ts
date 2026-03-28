@@ -19,6 +19,7 @@ export type LanguageDef = {
  * (see babel-party-server/index.mjs).
  */
 export const LANGUAGES: LanguageDef[] = [
+  { code: 'en', label: 'English', tier: 'easy', difficultyBand: 'easy', speechLocale: 'en-US', myMemoryCode: 'en' },
   { code: 'es', label: 'Spanish', tier: 'easy', difficultyBand: 'easy', speechLocale: 'es-ES', myMemoryCode: 'es' },
   { code: 'it', label: 'Italian', tier: 'easy', difficultyBand: 'easy', speechLocale: 'it-IT', myMemoryCode: 'it' },
   { code: 'fr', label: 'French', tier: 'easy', difficultyBand: 'easy', speechLocale: 'fr-FR', myMemoryCode: 'fr' },

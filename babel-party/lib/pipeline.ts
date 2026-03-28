@@ -120,3 +120,68 @@ export async function runEchoPipeline(input: PipelineInput): Promise<PipelineOut
     usedMockPipeline: true,
   };
 }
+
+export type ReversePipelineInput = {
+  recordingUri: string | null;
+  originalEnglish: string;
+};
+
+/** Final English clip vs target phrase (Reverse Audio step 2). */
+export async function runReversePipeline(input: ReversePipelineInput): Promise<PipelineOutput> {
+  const band = 'easy' as const;
+
+  if (API) {
+    try {
+      const form = new FormData();
+      if (input.recordingUri) {
+        const name = input.recordingUri.split('/').pop() ?? 'clip.wav';
+        const type = name.endsWith('.wav') ? 'audio/wav' : 'audio/wav';
+        form.append('audio', { uri: input.recordingUri, name, type } as never);
+      }
+      form.append('originalEnglish', input.originalEnglish);
+
+      const res = await fetch(`${API.replace(/\/$/, '')}/process-english`, {
+        method: 'POST',
+        body: form,
+      });
+      if (res.ok) {
+        const json = (await res.json()) as {
+          recognizedText?: string | null;
+          reverseEnglish?: string;
+          sttSource?: 'google' | 'mock';
+          sttMockReason?: SttMockReason;
+        };
+        const reverseEnglish = normalizeTranslationText(
+          json.reverseEnglish ?? mockReverseFromOriginal(input.originalEnglish, 'en'),
+        );
+        const closeness = closenessFromTexts(input.originalEnglish, reverseEnglish) as 0 | 1 | 2 | 3;
+        const languageBonus = languageBonusFromBand(band);
+        const hasTranscript = Boolean(json.recognizedText && String(json.recognizedText).trim());
+        const usedMockStt =
+          json.sttSource === 'mock' || (json.sttSource == null && !hasTranscript);
+        return {
+          recognizedText: json.recognizedText ? normalizeTranslationText(json.recognizedText) : null,
+          reverseEnglish,
+          closenessScore: closeness,
+          languageBonus,
+          funnyLabel: funnyLabel(closeness),
+          usedMockPipeline: usedMockStt,
+          sttMockReason: usedMockStt ? json.sttMockReason : undefined,
+        };
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+
+  const reverseEnglish = normalizeTranslationText(mockReverseFromOriginal(input.originalEnglish, 'en'));
+  const closenessScore = closenessFromTexts(input.originalEnglish, reverseEnglish);
+  return {
+    recognizedText: null,
+    reverseEnglish,
+    closenessScore,
+    languageBonus: languageBonusFromBand(band),
+    funnyLabel: funnyLabel(closenessScore),
+    usedMockPipeline: true,
+  };
+}

@@ -1,5 +1,5 @@
 import type { LanguageDifficultyBand } from '@/lib/languages';
-import type { GameMode } from '@/lib/types';
+import type { AppGameId, GameMode } from '@/lib/types';
 
 /** Full arc length (rounds 1–7 scripted; round 7+ reuses “all-out” rules if extended later). */
 export const TOTAL_GAME_ROUNDS = 7;
@@ -100,4 +100,29 @@ export function mayhemRoundStage(roundIndex1Based: number): RoundStage {
 
 export function roundStageFor(mode: GameMode, roundIndex1Based: number): RoundStage {
   return mode === 'mayhem' ? mayhemRoundStage(roundIndex1Based) : regularRoundStage(roundIndex1Based);
+}
+
+/** Per-game tweaks: Babel Phone keeps short phrases; Reverse Audio is English-only scoring. */
+export function roundStageForGame(
+  appGame: AppGameId,
+  mode: GameMode,
+  roundIndex1Based: number,
+): RoundStage {
+  const base = roundStageFor(mode, roundIndex1Based);
+  if (appGame === 'babel_phone') {
+    return {
+      ...base,
+      phraseMinWords: 4,
+      phraseMaxWords: 6,
+    };
+  }
+  if (appGame === 'reverse_audio') {
+    return {
+      ...base,
+      languageBands: ['easy'],
+      phraseMinWords: 4,
+      phraseMaxWords: 6,
+    };
+  }
+  return base;
 }

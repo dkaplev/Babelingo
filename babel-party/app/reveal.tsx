@@ -4,10 +4,11 @@ import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
+import { babelEnglishChainForRound } from '@/lib/sessionHighlights';
 import { useGameStore } from '@/lib/gameStore';
 import { normalizeTranslationText } from '@/lib/normalizeTranslation';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { TurnResult } from '@/lib/types';
@@ -46,6 +47,8 @@ function mockSttExplanation(r: TurnResult): string {
 export default function RevealScreen() {
   const router = useRouter();
   const lastResult = useGameStore((s) => s.lastResult);
+  const results = useGameStore((s) => s.results);
+  const appGame = useGameStore((s) => s.settings.appGame);
   const funnyVotePending = useGameStore((s) => s.funnyVotePending);
   const grantFunnyBonus = useGameStore((s) => s.grantFunnyBonus);
   const advanceAfterReveal = useGameStore((s) => s.advanceAfterReveal);
@@ -54,6 +57,14 @@ export default function RevealScreen() {
   const revealKey = lastResult
     ? `${lastResult.playerId}-${lastResult.roundNumber}-${lastResult.phraseOriginal}`
     : '';
+
+  const babelChain = useMemo(
+    () =>
+      lastResult && appGame === 'babel_phone'
+        ? babelEnglishChainForRound(results, lastResult.roundNumber)
+        : [],
+    [lastResult, appGame, results],
+  );
 
   useEffect(() => {
     if (!revealKey) return;
@@ -109,17 +120,38 @@ export default function RevealScreen() {
         {REVEAL_FLAVOR_LINES[flavorIdx]}
       </Text>
       <View style={styles.block}>
-        <Text style={styles.originalLabel}>Started as</Text>
+        <Text style={styles.originalLabel}>
+          {appGame === 'reverse_audio'
+            ? 'Target phrase'
+            : appGame === 'babel_phone'
+              ? 'English they echoed from'
+              : 'Started as'}
+        </Text>
         <Text style={styles.original}>{lastResult.phraseOriginal}</Text>
       </View>
 
       <View style={[styles.block, styles.blockAccent]}>
-        <Text style={styles.bigLabel}>Came back as</Text>
+        <Text style={styles.bigLabel}>
+          {appGame === 'reverse_audio' ? 'You said (final take)' : 'Came back as'}
+        </Text>
         <Text style={styles.big}>{normalizeTranslationText(lastResult.reverseEnglish)}</Text>
       </View>
 
+      {babelChain.length > 1 ? (
+        <View style={styles.chainBox}>
+          <Text style={styles.chainBoxTitle}>Chain so far this round</Text>
+          {babelChain.map((line, i) => (
+            <Text key={`${i}-${line.slice(0, 10)}`} style={styles.chainBoxLine}>
+              → {line}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
       <View style={styles.meta}>
-        <Text style={styles.metaText}>Language: {lastResult.languageLabel}</Text>
+        {appGame === 'reverse_audio' ? null : (
+          <Text style={styles.metaText}>Language: {lastResult.languageLabel}</Text>
+        )}
         {lastResult.recognizedText ? (
           <Text style={styles.metaText}>Heard: {normalizeTranslationText(lastResult.recognizedText)}</Text>
         ) : null}
@@ -193,4 +225,27 @@ const styles = StyleSheet.create({
   },
   scoreMain: { fontFamily: Font.title, color: Colors.party.success, fontSize: 22 },
   scoreSub: { fontFamily: Font.body, color: Colors.party.textMuted, marginTop: 8, fontSize: 14, lineHeight: 20 },
+  chainBox: {
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: Colors.party.surface2,
+    borderWidth: 2,
+    borderColor: Colors.party.borderSubtle,
+    marginBottom: 12,
+    gap: 6,
+  },
+  chainBoxTitle: {
+    fontFamily: Font.bodyBold,
+    fontSize: 12,
+    color: Colors.party.accent2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  chainBoxLine: {
+    fontFamily: Font.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.party.textMuted,
+  },
 });

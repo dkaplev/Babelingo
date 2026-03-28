@@ -20,7 +20,9 @@ function readGoogleCloudApiKey() {
 
 const GOOGLE_KEY = readGoogleCloudApiKey();
 
+/** App sends ISO 639-1 codes; map to BCP-47 for Speech-to-Text (same locales work for TTS). */
 const STT_LOCALE = {
+  en: 'en-US',
   es: 'es-ES',
   it: 'it-IT',
   fr: 'fr-FR',
@@ -30,6 +32,23 @@ const STT_LOCALE = {
   ja: 'ja-JP',
   ar: 'ar-SA',
   hi: 'hi-IN',
+  no: 'nb-NO',
+  fi: 'fi-FI',
+  hu: 'hu-HU',
+  pl: 'pl-PL',
+  sv: 'sv-SE',
+  da: 'da-DK',
+  cs: 'cs-CZ',
+  ro: 'ro-RO',
+  nl: 'nl-NL',
+  pt: 'pt-BR',
+  ko: 'ko-KR',
+  id: 'id-ID',
+  vi: 'vi-VN',
+  th: 'th-TH',
+  uk: 'uk-UA',
+  sk: 'sk-SK',
+  he: 'he-IL',
 };
 
 const corsOrigin = process.env.CORS_ORIGIN?.trim();
@@ -125,6 +144,97 @@ async function googleTextToSpeech(text, languageBcp47) {
   }
   if (!data.audioContent) throw new Error('no_audio');
   return data.audioContent;
+}
+
+const TTS_LINEAR16_RATE = 16000;
+
+/** Raw mono PCM16 LE from Google (LINEAR16). */
+async function googleTtsLinear16Pcm(text, languageBcp47) {
+  if (!GOOGLE_KEY) throw new Error('no_google_key');
+  const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_KEY}`;
+  const body = {
+    input: { text },
+    voice: { languageCode: languageBcp47, ssmlGender: 'NEUTRAL' },
+    audioConfig: {
+      audioEncoding: 'LINEAR16',
+      sampleRateHertz: TTS_LINEAR16_RATE,
+      speakingRate: 0.95,
+    },
+  };
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    console.error('tts linear16 error', data);
+    throw new Error(data.error?.message ?? 'tts_failed');
+  }
+  if (!data.audioContent) throw new Error('no_audio');
+  return { pcm: Buffer.from(data.audioContent, 'base64'), sampleRate: TTS_LINEAR16_RATE };
+}
+
+function reversePcm16LE(pcm) {
+  const len = Math.floor(pcm.length / 2);
+  const out = Buffer.alloc(pcm.length);
+  for (let i = 0; i < len; i++) {
+    const s = pcm.readUInt16LE((len - 1 - i) * 2);
+    out.writeUInt16LE(s, i * 2);
+  }
+  return out;
+}
+
+function pcm16MonoToWav(pcm, sampleRate) {
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = pcm.length;
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0);
+  header.writeUInt32LE(36 + dataSize, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(numChannels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write('data', 36);
+  header.writeUInt32LE(dataSize, 40);
+  return Buffer.concat([header, pcm]);
+}
+
+/** Find PCM data subchunk and reverse samples in-place copy. */
+function reverseWavPcm16Buffer(buf) {
+  if (!isWavPcm(buf)) return null;
+  let offset = 12;
+  let dataStart = 0;
+  let dataSize = 0;
+  while (offset + 8 <= buf.length) {
+    const chunkId = buf.toString('ascii', offset, offset + 4);
+    const chunkSize = buf.readUInt32LE(offset + 4);
+    const padded = chunkSize + (chunkSize % 2);
+    if (chunkId === 'data') {
+      dataStart = offset + 8;
+      dataSize = chunkSize;
+      break;
+    }
+    offset += 8 + padded;
+  }
+  if (!dataStart || dataSize < 2) return null;
+  const pcm = buf.subarray(dataStart, dataStart + dataSize);
+  const revPcm = reversePcm16LE(Buffer.from(pcm));
+  return Buffer.concat([buf.subarray(0, dataStart), revPcm]);
+}
+
+function mockEnglishStt(originalEnglish) {
+  const words = originalEnglish.split(/\s+/).filter(Boolean);
+  const take = Math.max(1, Math.min(3, words.length));
+  return words.slice(0, take).join(' ');
 }
 
 async function myMemoryTranslate(q, pair) {
@@ -254,11 +364,21 @@ app.post('/process', upload.single('audio'), async (req, res) => {
 
     let recognizedText = null;
     let sttSource = 'mock';
-    if (buf?.length) {
+    /** Why we fell back to phrase-based mock STT (only set when sttSource ends up mock). */
+    let sttMockReason = null;
+    if (!buf?.length) {
+      sttMockReason = 'no_recording';
+    } else if (!GOOGLE_KEY) {
+      sttMockReason = 'no_server_key';
+    } else if (!isWavPcm(buf)) {
+      sttMockReason = 'bad_audio_format';
+    } else {
       const fromGoogle = await googleSpeechToText(buf, languageCode);
       if (fromGoogle) {
         recognizedText = fromGoogle;
         sttSource = 'google';
+      } else {
+        sttMockReason = 'google_stt_no_result';
       }
     }
     if (!recognizedText) {
@@ -284,10 +404,80 @@ app.post('/process', upload.single('audio'), async (req, res) => {
       reverseEnglish: normalizeTranslationText(String(reverseEnglish ?? '')),
       closenessScore: null,
       sttSource,
+      ...(sttSource === 'mock' && sttMockReason ? { sttMockReason } : {}),
     });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'process_failed' });
+  }
+});
+
+/** English phrase → TTS → reverse PCM → WAV (for Reverse Audio game). */
+app.post('/tts-reversed-wav', async (req, res) => {
+  try {
+    const text = String(req.body.text ?? '').trim();
+    if (!text) return res.status(400).json({ error: 'missing_text' });
+    if (!GOOGLE_KEY) return res.status(503).json({ error: 'tts_requires_google_key' });
+    const { pcm, sampleRate } = await googleTtsLinear16Pcm(text, 'en-US');
+    const rev = reversePcm16LE(pcm);
+    const wav = pcm16MonoToWav(rev, sampleRate);
+    res.json({ audioContentWavBase64: wav.toString('base64') });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'tts_reversed_failed' });
+  }
+});
+
+/** Reverse a mono PCM WAV in time (same sample format as app recordings). */
+app.post('/reverse-audio-wav', upload.single('audio'), async (req, res) => {
+  try {
+    const buf = req.file?.buffer;
+    if (!buf?.length) return res.status(400).json({ error: 'missing_audio' });
+    const out = reverseWavPcm16Buffer(buf);
+    if (!out) return res.status(400).json({ error: 'invalid_wav' });
+    res.json({ audioContentWavBase64: out.toString('base64') });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'reverse_audio_failed' });
+  }
+});
+
+/** STT in English only; transcript compared to original on the client for scoring. */
+app.post('/process-english', upload.single('audio'), async (req, res) => {
+  try {
+    const originalEnglish = String(req.body.originalEnglish ?? '').trim();
+    const buf = req.file?.buffer;
+    let recognizedText = null;
+    let sttSource = 'mock';
+    let sttMockReason = null;
+    if (!buf?.length) {
+      sttMockReason = 'no_recording';
+    } else if (!GOOGLE_KEY) {
+      sttMockReason = 'no_server_key';
+    } else if (!isWavPcm(buf)) {
+      sttMockReason = 'bad_audio_format';
+    } else {
+      const fromGoogle = await googleSpeechToText(buf, 'en');
+      if (fromGoogle) {
+        recognizedText = fromGoogle;
+        sttSource = 'google';
+      } else {
+        sttMockReason = 'google_stt_no_result';
+      }
+    }
+    if (!recognizedText) {
+      recognizedText = mockEnglishStt(originalEnglish);
+      sttSource = 'mock';
+    }
+    res.json({
+      recognizedText,
+      reverseEnglish: recognizedText,
+      sttSource,
+      ...(sttSource === 'mock' && sttMockReason ? { sttMockReason } : {}),
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'process_english_failed' });
   }
 });
 
@@ -299,6 +489,9 @@ app.get('/health', (_req, res) => {
       translate: true,
       stt: Boolean(GOOGLE_KEY),
       tts: Boolean(GOOGLE_KEY),
+      ttsReversedWav: Boolean(GOOGLE_KEY),
+      reverseAudioWav: true,
+      processEnglish: Boolean(GOOGLE_KEY),
     },
   });
 });

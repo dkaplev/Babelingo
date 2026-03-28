@@ -99,3 +99,78 @@ export async function playGoogleTts(text: string, languageBcp47: string): Promis
     }
   }
 }
+
+/** Play a mono PCM WAV returned as base64 from the pipeline (Reverse Audio). */
+export async function playPipelineWavBase64(audioContentWavBase64: string): Promise<void> {
+  const base = getPipelineBaseUrl();
+  if (!base) throw new Error('missing_pipeline_url');
+  await stopPipelineTtsPlayback();
+
+  const dir = cacheDirectory;
+  if (!dir) throw new Error('no_cache_directory');
+
+  const path = `${dir}babel-wav-${Date.now()}.wav`;
+  await writeAsStringAsync(path, audioContentWavBase64, { encoding: EncodingType.Base64 });
+  await audioModePlaybackSpeaker();
+
+  const { sound } = await Audio.Sound.createAsync(
+    { uri: path },
+    { shouldPlay: true, volume: 1, isMuted: false },
+  );
+  activeTts = { sound, path };
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('wav_playback_timeout')), 120_000);
+      sound.setOnPlaybackStatusUpdate((s) => {
+        if (!s.isLoaded) return;
+        if (s.didJustFinish) {
+          clearTimeout(t);
+          resolve();
+        }
+      });
+    });
+  } finally {
+    if (activeTts?.sound === sound) activeTts = null;
+    try {
+      await sound.unloadAsync();
+    } catch {
+      /* ignore */
+    }
+    try {
+      await deleteAsync(path, { idempotent: true });
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+export async function fetchTtsReversedWavBase64(text: string): Promise<string> {
+  const base = getPipelineBaseUrl();
+  if (!base) throw new Error('missing_pipeline_url');
+  const res = await fetch(`${base.replace(/\/$/, '')}/tts-reversed-wav`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) throw new Error(`tts_reversed_${res.status}`);
+  const data = (await res.json()) as { audioContentWavBase64?: string };
+  if (!data.audioContentWavBase64) throw new Error('no_wav');
+  return data.audioContentWavBase64;
+}
+
+export async function fetchReverseRecordingWavBase64(recordingUri: string): Promise<string> {
+  const base = getPipelineBaseUrl();
+  if (!base) throw new Error('missing_pipeline_url');
+  const form = new FormData();
+  const name = recordingUri.split('/').pop() ?? 'clip.wav';
+  const type = name.endsWith('.wav') ? 'audio/wav' : 'audio/wav';
+  form.append('audio', { uri: recordingUri, name, type } as never);
+  const res = await fetch(`${base.replace(/\/$/, '')}/reverse-audio-wav`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) throw new Error(`reverse_wav_${res.status}`);
+  const data = (await res.json()) as { audioContentWavBase64?: string };
+  if (!data.audioContentWavBase64) throw new Error('no_wav');
+  return data.audioContentWavBase64;
+}

@@ -69,6 +69,7 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: Colors.party.surface },
         }}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="pick-game" />
         <Stack.Screen name="how-it-works" />
         <Stack.Screen name="game-mode" />
         <Stack.Screen name="create-room" />

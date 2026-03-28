@@ -5,7 +5,7 @@ import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
-import { roundStageFor, TOTAL_GAME_ROUNDS } from '@/lib/progression';
+import { roundStageForGame, TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import { funniestResultInRound } from '@/lib/sessionHighlights';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -16,11 +16,14 @@ export default function RoundIntroScreen() {
   const router = useRouter();
   const currentRound = useGameStore((s) => s.currentRound);
   const gameMode = useGameStore((s) => s.settings.gameMode);
+  const appGame = useGameStore((s) => s.settings.appGame);
   const results = useGameStore((s) => s.results);
   const beginRound = useGameStore((s) => s.beginRound);
 
-  const stage = roundStageFor(gameMode, currentRound);
+  const stage = roundStageForGame(appGame, gameMode, currentRound);
   const modeLabel = gameMode === 'mayhem' ? 'Mayhem' : 'Regular';
+  const gameTitle =
+    appGame === 'babel_phone' ? 'Babel Phone' : appGame === 'reverse_audio' ? 'Reverse Audio' : 'Echo Translator';
 
   const prevRoundMvp = useMemo(() => {
     if (currentRound <= 1) return null;
@@ -43,7 +46,7 @@ export default function RoundIntroScreen() {
   return (
     <Screen
       title={stage.headline}
-      subtitle={`${modeLabel} · Round ${currentRound} of ${TOTAL_GAME_ROUNDS}`}
+      subtitle={`${gameTitle} · ${modeLabel} · Round ${currentRound} of ${TOTAL_GAME_ROUNDS}`}
       footer={<PrimaryButton title="Start this round" onPress={onStart} />}>
       {currentRound === 1 ? <BackLink fallbackHref="/lobby" label="← Lobby" /> : null}
 
@@ -84,9 +87,34 @@ export default function RoundIntroScreen() {
       {currentRound === 1 ? (
         <View style={styles.rules}>
           <Text style={styles.rulesTitle}>Quick rules</Text>
-          <Text style={styles.rule}>① Pass the phone to whoever is up — they only hear the foreign line.</Text>
-          <Text style={styles.rule}>② Play the phrase, mimic it out loud, record, submit — then the reveal.</Text>
-          <Text style={styles.rule}>③ Louder and messier usually beats quiet and perfect.</Text>
+          {appGame === 'reverse_audio' ? (
+            <>
+              <Text style={styles.rule}>
+                ① Pass the phone — active player hears the line backward, mimics it, hears their clip backward, then
+                records the real phrase.
+              </Text>
+              <Text style={styles.rule}>② Pipeline URL + Google key on the server required for reversed playback.</Text>
+              <Text style={styles.rule}>③ Solo is fine: one player runs the whole chain each round.</Text>
+            </>
+          ) : appGame === 'babel_phone' ? (
+            <>
+              <Text style={styles.rule}>
+                ① Host reads the English line to the room; the player only hears a foreign translation of the current
+                English link.
+              </Text>
+              <Text style={styles.rule}>
+                ② Each turn, the next English line is whatever came back from the last recording — classic telephone,
+                but through languages.
+              </Text>
+              <Text style={styles.rule}>③ After the round, the scoreboard shows the full English mutation chain.</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.rule}>① Pass the phone to whoever is up — they only hear the foreign line.</Text>
+              <Text style={styles.rule}>② Play the phrase, mimic it out loud, record, submit — then the reveal.</Text>
+              <Text style={styles.rule}>③ Louder and messier usually beats quiet and perfect.</Text>
+            </>
+          )}
         </View>
       ) : null}
     </Screen>

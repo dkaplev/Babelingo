@@ -5,7 +5,7 @@ import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
@@ -28,7 +28,7 @@ export default function HomeScreen() {
   const startGame = () => {
     resetSession();
     trackEvent('tap_start_game');
-    router.push('/game-mode');
+    router.push('/pick-game' as Href);
   };
 
   const openHowItWorks = () => {

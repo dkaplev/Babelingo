@@ -8,7 +8,7 @@ import { defaultLanguagePool } from '@/lib/languages';
 import { useGameStore } from '@/lib/gameStore';
 import { TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 function Stepper(props: {
@@ -41,17 +41,30 @@ function Stepper(props: {
   );
 }
 
+function gameLabel(appGame: string): string {
+  if (appGame === 'babel_phone') return 'Babel Phone';
+  if (appGame === 'reverse_audio') return 'Reverse Audio';
+  return 'Echo Translator';
+}
+
 export default function CreateRoomScreen() {
   const router = useRouter();
   const settings = useGameStore((s) => s.settings);
   const updateSettings = useGameStore((s) => s.updateSettings);
 
-  const [playerCount, setPlayerCount] = useState(settings.playerCount);
+  const minPlayers = settings.appGame === 'reverse_audio' ? 1 : 2;
+  const [playerCount, setPlayerCount] = useState(() =>
+    Math.max(minPlayers, settings.playerCount),
+  );
   const [teams, setTeams] = useState(settings.teamsEnabled);
+
+  useEffect(() => {
+    setPlayerCount((c) => Math.max(minPlayers, c));
+  }, [minPlayers]);
 
   const onContinue = () => {
     updateSettings({
-      playerCount,
+      playerCount: Math.max(minPlayers, playerCount),
       rounds: TOTAL_GAME_ROUNDS,
       teamsEnabled: teams,
       difficulty: 'chaos',
@@ -69,9 +82,9 @@ export default function CreateRoomScreen() {
   return (
     <Screen
       title="Create room"
-      subtitle="How many people pass the phone — rounds and difficulty follow the mode you picked on the last screen.">
+      subtitle={`${gameLabel(settings.appGame)} · how many pass the phone (rounds follow the mode you picked).`}>
       <BackLink fallbackHref="/game-mode" />
-      <Stepper label="Players" value={playerCount} min={2} max={16} onChange={setPlayerCount} />
+      <Stepper label="Players" value={playerCount} min={minPlayers} max={16} onChange={setPlayerCount} />
 
       <Text style={styles.section}>Teams</Text>
       <Pressable style={[styles.toggle, teams && styles.toggleOn]} onPress={() => setTeams(!teams)}>

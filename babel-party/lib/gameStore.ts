@@ -1,6 +1,6 @@
 import { defaultLanguagePool, languageCodesForBands } from '@/lib/languages';
 import { pickPhraseForWordRange } from '@/lib/phrases';
-import { roundStageFor, type RoundStage, TOTAL_GAME_ROUNDS } from '@/lib/progression';
+import { roundStageForGame, type RoundStage, TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import type { Phrase, Player, RoomSettings, TurnResult } from '@/lib/types';
 import { create } from 'zustand';
 
@@ -38,6 +38,9 @@ type GameState = {
   roundLanguages: string[];
   /** Phrase for each turn; repeats when a language is reused get a fresh phrase. */
   roundPhrases: Phrase[];
+  /** Reverse Audio: 1 = record backward guess after hearing target; 2 = record final English after hearing guess reversed. */
+  reverseStep: 1 | 2;
+  reverseGuessUri: string | null;
 };
 
 const defaultSettings = (): RoomSettings => ({
@@ -45,6 +48,7 @@ const defaultSettings = (): RoomSettings => ({
   teamsEnabled: false,
   rounds: TOTAL_GAME_ROUNDS,
   gameMode: 'regular',
+  appGame: 'echo_translator',
   difficulty: 'chaos',
   category: 'mixed',
   languageCodes: defaultLanguagePool(),
@@ -138,6 +142,8 @@ export const useGameStore = create<
     advanceAfterReveal: () => void;
     goScoreboardToNext: () => void;
     pickLanguageForCurrentTurn: () => string;
+    resetReverseTurn: () => void;
+    commitReverseGuess: (uri: string) => void;
   }
 >((set, get) => ({
   settings: defaultSettings(),
@@ -156,6 +162,8 @@ export const useGameStore = create<
   funnyVotePending: false,
   roundLanguages: [],
   roundPhrases: [],
+  reverseStep: 1,
+  reverseGuessUri: null,
 
   resetSession: () =>
     set({
@@ -175,6 +183,24 @@ export const useGameStore = create<
       funnyVotePending: false,
       roundLanguages: [],
       roundPhrases: [],
+      reverseStep: 1,
+      reverseGuessUri: null,
+    }),
+
+  resetReverseTurn: () =>
+    set({
+      reverseStep: 1,
+      reverseGuessUri: null,
+      listensRemaining: MAX_PHRASE_PLAYS,
+      pendingRecordingUri: null,
+    }),
+
+  commitReverseGuess: (uri) =>
+    set({
+      reverseGuessUri: uri,
+      reverseStep: 2,
+      listensRemaining: MAX_PHRASE_PLAYS,
+      pendingRecordingUri: null,
     }),
 
   updateSettings: (partial) =>
@@ -212,6 +238,8 @@ export const useGameStore = create<
       roundPhrase: null,
       currentLanguageCode: null,
       translatedText: null,
+      reverseStep: 1,
+      reverseGuessUri: null,
     });
   },
 
@@ -241,6 +269,8 @@ export const useGameStore = create<
       roundPhrase: null,
       currentLanguageCode: null,
       translatedText: null,
+      reverseStep: 1,
+      reverseGuessUri: null,
     });
   },
 
@@ -251,13 +281,27 @@ export const useGameStore = create<
       playerOrder = shuffle(players.map((p) => p.id));
     }
     if (playerOrder.length === 0) return;
-    const stage = roundStageFor(settings.gameMode, currentRound);
+    const appGame = settings.appGame;
+    const stage = roundStageForGame(appGame, settings.gameMode, currentRound);
     let codes = languageCodesForBands(stage.languageBands);
     if (codes.length === 0) codes = defaultLanguagePool();
     const order = currentRound === 1 ? playerOrder : shuffle(playerOrder);
     const history = languageHistoryFromResults(results);
-    const roundLanguages = assignLanguagesForRound(codes, order, history);
-    const roundPhrases = buildRoundPhrasesForStage(roundLanguages, stage);
+    let roundLanguages: string[];
+    let roundPhrases: Phrase[];
+    if (appGame === 'reverse_audio') {
+      const phrase = pickPhraseForWordRange('mixed', stage.phraseMinWords, stage.phraseMaxWords);
+      roundLanguages = order.map(() => 'en');
+      roundPhrases = order.map(() => phrase);
+    } else {
+      roundLanguages = assignLanguagesForRound(codes, order, history);
+      if (appGame === 'babel_phone') {
+        const seed = pickPhraseForWordRange('mixed', stage.phraseMinWords, stage.phraseMaxWords);
+        roundPhrases = order.map(() => seed);
+      } else {
+        roundPhrases = buildRoundPhrasesForStage(roundLanguages, stage);
+      }
+    }
     set({
       phase: 'turn',
       roundPhrase: roundPhrases[0] ?? null,
@@ -271,6 +315,8 @@ export const useGameStore = create<
       playerOrder: order,
       roundLanguages,
       roundPhrases,
+      reverseStep: 1,
+      reverseGuessUri: null,
     });
   },
 
@@ -333,12 +379,17 @@ export const useGameStore = create<
     }),
 
   advanceAfterReveal: () => {
-    const { turnIndex, playerOrder, roundLanguages, roundPhrases } = get();
+    const { turnIndex, playerOrder, roundLanguages, roundPhrases, settings, lastResult, roundPhrase } = get();
     if (turnIndex + 1 < playerOrder.length) {
       const codes = defaultLanguagePool();
       const nextLang =
         roundLanguages[turnIndex + 1] ?? codes[Math.floor(Math.random() * codes.length)]!;
-      const nextPhrase = roundPhrases[turnIndex + 1] ?? null;
+      let nextPhrase: Phrase | null;
+      if (settings.appGame === 'babel_phone' && lastResult?.reverseEnglish?.trim() && roundPhrase) {
+        nextPhrase = { ...roundPhrase, text: lastResult.reverseEnglish.trim() };
+      } else {
+        nextPhrase = roundPhrases[turnIndex + 1] ?? null;
+      }
       set({
         turnIndex: turnIndex + 1,
         listensRemaining: MAX_PHRASE_PLAYS,
@@ -349,6 +400,8 @@ export const useGameStore = create<
         lastResult: null,
         phase: 'turn',
         funnyVotePending: false,
+        reverseStep: 1,
+        reverseGuessUri: null,
       });
       return;
     }

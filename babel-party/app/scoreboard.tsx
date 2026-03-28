@@ -4,7 +4,7 @@ import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
-import { topScorersInRound } from '@/lib/sessionHighlights';
+import { babelEnglishChainForRound, topScorersInRound } from '@/lib/sessionHighlights';
 import { computeTeamTotals } from '@/lib/teamScores';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
@@ -21,6 +21,10 @@ export default function ScoreboardScreen() {
   const sorted = [...players].sort((a, b) => b.totalScore - a.totalScore);
   const teamTotals = useMemo(() => computeTeamTotals(players), [players]);
   const roundLeaders = useMemo(() => topScorersInRound(results, currentRound), [results, currentRound]);
+  const babelChain = useMemo(
+    () => (settings.appGame === 'babel_phone' ? babelEnglishChainForRound(results, currentRound) : []),
+    [settings.appGame, results, currentRound],
+  );
 
   const onNext = () => {
     goScoreboardToNext();
@@ -41,6 +45,17 @@ export default function ScoreboardScreen() {
           onPress={onNext}
         />
       }>
+      {babelChain.length > 1 ? (
+        <View style={styles.chainBanner}>
+          <Text style={styles.chainTitle}>Babel Phone — English chain (round {currentRound})</Text>
+          {babelChain.map((line, i) => (
+            <Text key={`${i}-${line.slice(0, 12)}`} style={styles.chainLine}>
+              {i + 1}. {line}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
       {roundLeaders.length > 0 ? (
         <View style={styles.heatBanner}>
           <Text style={styles.heatTitle}>Round {currentRound} — most points this round</Text>
@@ -103,6 +118,29 @@ export default function ScoreboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  chainBanner: {
+    backgroundColor: Colors.party.surface2,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 2,
+    borderColor: Colors.party.accent2,
+    gap: 8,
+  },
+  chainTitle: {
+    fontFamily: Font.bodyBold,
+    fontSize: 12,
+    color: Colors.party.accent2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  chainLine: {
+    fontFamily: Font.body,
+    fontSize: 15,
+    lineHeight: 22,
+    color: Colors.party.text,
+  },
   heatBanner: {
     backgroundColor: Colors.party.card,
     borderRadius: 16,

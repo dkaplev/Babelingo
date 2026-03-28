@@ -8,7 +8,14 @@ import { MAX_PHRASE_PLAYS, currentPlayer, useGameStore } from '@/lib/gameStore';
 import { languageByCode } from '@/lib/languages';
 import { RECORDING_OPTIONS_GOOGLE_STT } from '@/lib/recordingOptions';
 import { forceDevicePhraseTts, getPipelineBaseUrl } from '@/lib/env';
-import { playGoogleTts, stopPipelineTtsPlayback, useGoogleCloudTts } from '@/lib/playGoogleTts';
+import {
+  fetchReverseRecordingWavBase64,
+  fetchTtsReversedWavBase64,
+  playGoogleTts,
+  playPipelineWavBase64,
+  stopPipelineTtsPlayback,
+  useGoogleCloudTts,
+} from '@/lib/playGoogleTts';
 import { translateEnToWithMeta, type TranslationSource } from '@/lib/translate';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
@@ -26,7 +33,7 @@ import {
   View,
 } from 'react-native';
 
-export default function TurnScreen() {
+function EchoBabelTurnScreen() {
   const router = useRouter();
   const roundPhrase = useGameStore((s) => s.roundPhrase);
   const currentLanguageCode = useGameStore((s) => s.currentLanguageCode);
@@ -416,6 +423,334 @@ export default function TurnScreen() {
       ) : null}
     </Screen>
   );
+}
+
+function ReverseTurnScreen() {
+  const router = useRouter();
+  const roundPhrase = useGameStore((s) => s.roundPhrase);
+  const listensRemaining = useGameStore((s) => s.listensRemaining);
+  const nextListenConsumed = useGameStore((s) => s.nextListenConsumed);
+  const setRecordingUri = useGameStore((s) => s.setRecordingUri);
+  const pendingRecordingUri = useGameStore((s) => s.pendingRecordingUri);
+  const resetSession = useGameStore((s) => s.resetSession);
+  const phase = useGameStore((s) => s.phase);
+  const reverseStep = useGameStore((s) => s.reverseStep);
+  const reverseGuessUri = useGameStore((s) => s.reverseGuessUri);
+  const commitReverseGuess = useGameStore((s) => s.commitReverseGuess);
+  const resetReverseTurn = useGameStore((s) => s.resetReverseTurn);
+
+  const [handoffDone, setHandoffDone] = useState(false);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const [phrasePlaybackBusy, setPhrasePlaybackBusy] = useState(false);
+  const [handoffCountdown, setHandoffCountdown] = useState(3);
+  const [reverseError, setReverseError] = useState<string | null>(null);
+  const tick = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const player = useGameStore((s) => currentPlayer(s));
+
+  const hasListenedOnce = listensRemaining < MAX_PHRASE_PLAYS;
+  const hasFinalRecording = Boolean(pendingRecordingUri);
+  const canStartRecord =
+    hasListenedOnce && !phrasePlaybackBusy && (reverseStep === 1 || Boolean(reverseGuessUri));
+  const pipelineOk = Boolean(getPipelineBaseUrl());
+
+  useEffect(() => {
+    setHandoffDone(false);
+    setHandoffCountdown(3);
+    setReverseError(null);
+  }, [roundPhrase?.id, player?.id]);
+
+  useEffect(() => {
+    if (handoffDone || handoffCountdown <= 0) return;
+    const id = setTimeout(() => {
+      setHandoffCountdown((c) => {
+        const next = c - 1;
+        if (next === 0 && Platform.OS !== 'web') {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearTimeout(id);
+  }, [handoffDone, handoffCountdown]);
+
+  useEffect(() => {
+    if (phase !== 'turn') return;
+    if (roundPhrase && player) return;
+    const timer = setTimeout(() => {
+      const s = useGameStore.getState();
+      if (s.phase !== 'turn') return;
+      const p = currentPlayer(s);
+      if (s.roundPhrase && p) return;
+      resetSession();
+      router.replace('/');
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [roundPhrase?.id, player?.id, phase, resetSession, router]);
+
+  useEffect(() => {
+    return () => {
+      if (tick.current) clearInterval(tick.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!handoffDone) return;
+    const id = setTimeout(() => {
+      void audioModePlaybackSpeaker();
+    }, Platform.OS === 'ios' ? 240 : 100);
+    return () => clearTimeout(id);
+  }, [handoffDone]);
+
+  const confirmMainMenu = () => {
+    Alert.alert('Leave game?', 'This clears the current session and returns home.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Main menu',
+        style: 'destructive',
+        onPress: () => {
+          void stopPipelineTtsPlayback();
+          trackEvent('turn_exit_main_menu');
+          resetSession();
+          router.replace('/');
+        },
+      },
+    ]);
+  };
+
+  const menuRow = (
+    <Pressable onPress={confirmMainMenu} style={styles.menuRow} hitSlop={8}>
+      <Text style={styles.menuText}>◀ MAIN MENU</Text>
+    </Pressable>
+  );
+
+  const onPlayBackwardTarget = async () => {
+    if (!roundPhrase || listensRemaining <= 0 || phrasePlaybackBusy) return;
+    setReverseError(null);
+    setPhrasePlaybackBusy(true);
+    try {
+      await stopPipelineTtsPlayback();
+      const b64 = await fetchTtsReversedWavBase64(roundPhrase.text);
+      await playPipelineWavBase64(b64);
+      nextListenConsumed();
+    } catch (e) {
+      setReverseError(e instanceof Error ? e.message : 'Could not play reversed phrase');
+    } finally {
+      setPhrasePlaybackBusy(false);
+    }
+  };
+
+  const onPlayGuessReversed = async () => {
+    if (!reverseGuessUri || listensRemaining <= 0 || phrasePlaybackBusy) return;
+    setReverseError(null);
+    setPhrasePlaybackBusy(true);
+    try {
+      await stopPipelineTtsPlayback();
+      const b64 = await fetchReverseRecordingWavBase64(reverseGuessUri);
+      await playPipelineWavBase64(b64);
+      nextListenConsumed();
+    } catch (e) {
+      setReverseError(e instanceof Error ? e.message : 'Could not reverse your recording');
+    } finally {
+      setPhrasePlaybackBusy(false);
+    }
+  };
+
+  const startRecording = async () => {
+    if (phrasePlaybackBusy) return;
+    await stopPipelineTtsPlayback();
+    if (reverseStep === 2) {
+      setRecordingUri(null);
+    }
+    try {
+      const perm = await Audio.requestPermissionsAsync();
+      if (!perm.granted) return;
+      await new Promise((r) => setTimeout(r, 50));
+      await audioModeRecording();
+      const rec = new Audio.Recording();
+      await rec.prepareToRecordAsync(RECORDING_OPTIONS_GOOGLE_STT);
+      await rec.startAsync();
+      setRecording(rec);
+      setIsRecording(true);
+      setSeconds(0);
+      if (tick.current) clearInterval(tick.current);
+      tick.current = setInterval(() => setSeconds((s) => s + 1), 1000);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recording) return;
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      if (uri) {
+        if (reverseStep === 1) {
+          commitReverseGuess(uri);
+        } else {
+          setRecordingUri(uri);
+        }
+      }
+    } finally {
+      setRecording(null);
+      setIsRecording(false);
+      if (tick.current) {
+        clearInterval(tick.current);
+        tick.current = null;
+      }
+      await audioModePlaybackSpeaker();
+      await new Promise((r) => setTimeout(r, Platform.OS === 'ios' ? 90 : 40));
+    }
+  };
+
+  const onSubmit = async () => {
+    if (isRecording) await stopRecording();
+    router.push('/processing');
+  };
+
+  if (!roundPhrase || !player) {
+    return null;
+  }
+
+  if (!handoffDone) {
+    return (
+      <Screen
+        title="Host: read to the room"
+        subtitle={`Pass the phone to ${player.name} after the countdown — they should not read this English text.`}
+        footer={
+          <PrimaryButton
+            title={
+              handoffCountdown > 0
+                ? `Pass phone in ${handoffCountdown}…`
+                : `${player.name} has the phone — hide phrase`
+            }
+            onPress={() => setHandoffDone(true)}
+            disabled={handoffCountdown > 0}
+            accessibilityLabel={
+              handoffCountdown > 0
+                ? `Wait ${handoffCountdown} seconds before handing over the phone`
+                : `Confirm ${player.name} has the phone and hide the English phrase`
+            }
+          />
+        }>
+        {menuRow}
+        {handoffCountdown > 0 ? (
+          <View style={styles.countdownWrap} accessibilityLiveRegion="polite">
+            <Text style={styles.countdownNum}>{handoffCountdown}</Text>
+            <Text style={styles.countdownHint}>Get ready to pass the device…</Text>
+          </View>
+        ) : null}
+        <View style={styles.card}>
+          <Text style={styles.whisper}>English phrase — read aloud to the room</Text>
+          <Text style={styles.en}>{roundPhrase.text}</Text>
+        </View>
+        <Text style={styles.mutedSmall}>
+          Player hears it backward only, then works through the steps on the next screen.
+        </Text>
+      </Screen>
+    );
+  }
+
+  const playLabel =
+    reverseStep === 1 ? '① Play phrase backward' : '② Play your attempt backward';
+  const onPlay = reverseStep === 1 ? onPlayBackwardTarget : onPlayGuessReversed;
+  const playDisabled =
+    listensRemaining <= 0 ||
+    phrasePlaybackBusy ||
+    (reverseStep === 2 && !reverseGuessUri) ||
+    !pipelineOk;
+  const playIsPrimary =
+    !isRecording && listensRemaining > 0 && !hasListenedOnce && !phrasePlaybackBusy;
+  const recordIsPrimary =
+    !isRecording && hasListenedOnce && (reverseStep === 1 ? !reverseGuessUri : !hasFinalRecording);
+
+  return (
+    <Screen
+      title={`${player.name} · Reverse Audio`}
+      subtitle={
+        reverseStep === 1
+          ? `Step 1 of 2 — backward clue, then mimic (${listensRemaining} replays left)`
+          : `Step 2 of 2 — your clip backward, then say the real line (${listensRemaining} replays left)`
+      }
+      footer={
+        <View style={{ gap: 10 }}>
+          {reverseStep === 2 ? (
+            <PrimaryButton variant="ghost" title="Re-do step 1 (discard progress)" onPress={resetReverseTurn} />
+          ) : null}
+          <PrimaryButton
+            title="Submit turn"
+            onPress={onSubmit}
+            disabled={reverseStep !== 2 || !pendingRecordingUri || isRecording}
+            variant={reverseStep === 2 && pendingRecordingUri && !isRecording ? 'primary' : 'dim'}
+            accessibilityLabel="Submit turn for processing"
+          />
+        </View>
+      }>
+      {menuRow}
+
+      {!pipelineOk ? (
+        <View style={styles.errorCard}>
+          <Text style={styles.warn}>
+            Set EXPO_PUBLIC_PIPELINE_URL so the app can build reversed audio (Google key on the server).
+          </Text>
+        </View>
+      ) : null}
+
+      {reverseError ? (
+        <View style={styles.errorCard}>
+          <Text style={styles.warn}>{reverseError}</Text>
+        </View>
+      ) : null}
+
+      <PrimaryButton
+        title={listensRemaining <= 0 ? 'No replays left' : playLabel}
+        onPress={() => void onPlay()}
+        disabled={playDisabled}
+        variant={playIsPrimary ? 'primary' : 'dim'}
+        accessibilityLabel={playLabel}
+      />
+
+      <View style={{ height: 14 }} />
+
+      {!isRecording ? (
+        <PrimaryButton
+          title={
+            reverseStep === 1
+              ? reverseGuessUri
+                ? 'Re-record backward mimic'
+                : 'Record your backward mimic'
+              : hasFinalRecording
+                ? 'Re-record final phrase'
+                : 'Record the real phrase'
+          }
+          onPress={() => void startRecording()}
+          disabled={!canStartRecord || phrasePlaybackBusy}
+          variant={recordIsPrimary ? 'primary' : 'dim'}
+          accessibilityLabel="Record"
+        />
+      ) : (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Stop recording"
+          style={[styles.recordBtn, styles.recordActive]}
+          onPress={() => void stopRecording()}>
+          <Text style={styles.recordLabel}>■ Stop recording ({seconds}s)</Text>
+        </Pressable>
+      )}
+      <Text style={styles.mutedSmall}>
+        Listen at least once each step → record → next step or submit on step 2.
+      </Text>
+    </Screen>
+  );
+}
+
+export default function TurnScreen() {
+  const appGame = useGameStore((s) => s.settings.appGame);
+  if (appGame === 'reverse_audio') return <ReverseTurnScreen />;
+  return <EchoBabelTurnScreen />;
 }
 
 const styles = StyleSheet.create({

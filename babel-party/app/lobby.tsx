@@ -6,9 +6,16 @@ import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { TOTAL_GAME_ROUNDS } from '@/lib/progression';
+import type { AppGameId } from '@/lib/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
+
+function shortGameLabel(id: AppGameId): string {
+  if (id === 'babel_phone') return 'Babel Phone';
+  if (id === 'reverse_audio') return 'Reverse Audio';
+  return 'Echo Translator';
+}
 
 export default function LobbyScreen() {
   const router = useRouter();
@@ -35,7 +42,7 @@ export default function LobbyScreen() {
   return (
     <Screen
       title="Lobby"
-      subtitle={`${settings.gameMode === 'mayhem' ? 'Mayhem' : 'Regular'} · ${TOTAL_GAME_ROUNDS} rounds · ${settings.teamsEnabled ? 'Team totals win' : 'Solo scoring'}`}
+      subtitle={`${shortGameLabel(settings.appGame)} · ${settings.gameMode === 'mayhem' ? 'Mayhem' : 'Regular'} · ${TOTAL_GAME_ROUNDS} rounds · ${settings.teamsEnabled ? 'Team totals win' : 'Solo scoring'}`}
       footer={<PrimaryButton title="Everyone’s in — start" onPress={onStart} />}>
       <BackLink fallbackHref="/create-room" />
       <Text style={styles.hint}>Rename everyone — scores and turns use these names out loud.</Text>

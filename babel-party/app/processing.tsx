@@ -4,7 +4,7 @@ import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { currentPlayer, useGameStore } from '@/lib/gameStore';
 import { languageByCode } from '@/lib/languages';
-import { runEchoPipeline } from '@/lib/pipeline';
+import { runEchoPipeline, runReversePipeline } from '@/lib/pipeline';
 import type { TurnResult } from '@/lib/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -35,35 +35,45 @@ export default function ProcessingScreen() {
       const recUri = store.pendingRecordingUri;
 
       if (!player || !phrase || !langCode) {
-        router.replace('/turn');
+        useGameStore.getState().resetSession();
+        router.replace('/');
         return;
       }
       const lang = languageByCode(langCode);
       const started = Date.now();
-      const out = await runEchoPipeline({
-        recordingUri: recUri,
-        originalEnglish: phrase.text,
-        translatedForeign: trans ?? '',
-        languageCode: langCode,
-        category: phrase.category,
-      });
+      const appGame = store.settings.appGame;
+      const out =
+        appGame === 'reverse_audio'
+          ? await runReversePipeline({
+              recordingUri: recUri,
+              originalEnglish: phrase.text,
+            })
+          : await runEchoPipeline({
+              recordingUri: recUri,
+              originalEnglish: phrase.text,
+              translatedForeign: trans ?? '',
+              languageCode: langCode,
+              category: phrase.category,
+            });
       trackEvent('round_processing_done', {
         latency_ms: Date.now() - started,
         mock: out.usedMockPipeline,
         language: langCode,
+        app_game: appGame,
       });
 
       const totalTurnScore = (out.closenessScore + out.languageBonus) as number;
 
       const result: TurnResult = {
         roundNumber: store.currentRound,
+        turnOrderInRound: store.turnIndex,
         playerId: player.id,
         playerName: player.name,
         phraseOriginal: phrase.text,
         phraseCategory: phrase.category,
         languageCode: langCode,
         languageLabel: lang?.label ?? langCode,
-        translatedText: trans ?? '',
+        translatedText: appGame === 'reverse_audio' ? '(reversed audio)' : (trans ?? ''),
         recognizedText: out.recognizedText,
         reverseEnglish: out.reverseEnglish,
         closenessScore: out.closenessScore,
@@ -72,6 +82,7 @@ export default function ProcessingScreen() {
         totalTurnScore,
         funnyLabel: out.funnyLabel,
         usedMockPipeline: out.usedMockPipeline,
+        sttMockReason: out.sttMockReason,
       };
 
       useGameStore.getState().commitTurnResult(result);

@@ -4,6 +4,17 @@ export function resultsForRound(results: TurnResult[], roundNumber: number): Tur
   return results.filter((r) => r.roundNumber === roundNumber);
 }
 
+/** Babel Phone: ordered English mutations for the round (seed → each player’s echo-back). */
+export function babelEnglishChainForRound(results: TurnResult[], roundNumber: number): string[] {
+  const inRound = resultsForRound(results, roundNumber).sort(
+    (a, b) => a.turnOrderInRound - b.turnOrderInRound,
+  );
+  if (inRound.length === 0) return [];
+  const chain: string[] = [inRound[0]!.phraseOriginal];
+  for (const r of inRound) chain.push(r.reverseEnglish.trim());
+  return chain;
+}
+
 /** “Funniest” = lowest closeness (most mangled), tie-break longer reverse text. */
 export function funniestResultInRound(results: TurnResult[], roundNumber: number): TurnResult | null {
   const inRound = resultsForRound(results, roundNumber);

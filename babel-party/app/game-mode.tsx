@@ -7,7 +7,7 @@ import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import type { GameMode } from '@/lib/types';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function GameModeScreen() {
@@ -22,7 +22,7 @@ export default function GameModeScreen() {
 
   return (
     <Screen title="Pick your vibe" subtitle="Same party energy — two ways to ramp the chaos.">
-      <BackLink fallbackHref="/" />
+      <BackLink fallbackHref={'/pick-game' as Href} />
       <Text style={styles.topHint}>{TOTAL_GAME_ROUNDS} rounds either way. Headcount comes next.</Text>
 
       <View style={[styles.card, styles.cardRegular]}>
