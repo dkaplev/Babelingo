@@ -1,9 +1,11 @@
+import { BackLink } from '@/components/BackLink';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
+import { TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
@@ -11,8 +13,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 export default function LobbyScreen() {
   const router = useRouter();
   const settings = useGameStore((s) => s.settings);
-  const setPlayerNames = useGameStore((s) => s.setPlayerNames);
-  const startFromLobby = useGameStore((s) => s.startFromLobby);
+  const startSessionFromLobby = useGameStore((s) => s.startSessionFromLobby);
 
   const [names, setNames] = useState<string[]>(() =>
     Array.from({ length: settings.playerCount }, (_, i) => `Player ${i + 1}`),
@@ -26,17 +27,17 @@ export default function LobbyScreen() {
   }, [settings.playerCount]);
 
   const onStart = () => {
-    setPlayerNames(names);
-    startFromLobby();
+    startSessionFromLobby(names);
     trackEvent('lobby_start');
-    router.push('/instructions');
+    router.replace('/round-intro');
   };
 
   return (
     <Screen
       title="Lobby"
-      subtitle={`${settings.rounds} rounds · ${settings.difficulty} · ${settings.teamsEnabled ? 'Teams' : 'Solo scoring'}`}
+      subtitle={`${settings.gameMode === 'mayhem' ? 'Mayhem' : 'Regular'} · ${TOTAL_GAME_ROUNDS} rounds · ${settings.teamsEnabled ? 'Team totals win' : 'Solo scoring'}`}
       footer={<PrimaryButton title="Everyone’s in — start" onPress={onStart} />}>
+      <BackLink fallbackHref="/create-room" />
       <Text style={styles.hint}>Rename everyone — scores and turns use these names out loud.</Text>
       {names.map((n, i) => (
         <View key={i} style={styles.field}>

@@ -1,3 +1,4 @@
+import { BackLink } from '@/components/BackLink';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
@@ -25,13 +26,14 @@ export default function InstructionsScreen() {
           }}
         />
       }>
+      <BackLink fallbackHref="/lobby" label="← Lobby" />
       <View style={styles.card}>
         <View style={styles.ruleRow}>
           <View style={styles.ruleNumWrap}>
             <Text style={styles.ruleNum}>1</Text>
           </View>
           <Text style={styles.rule}>
-            Tap play to hear the foreign line — up to three replays, or skip when you are ready to say it.
+            Tap Play to hear the foreign line (at least once), then Record, then Submit — up to three replays if you need them.
           </Text>
         </View>
         <View style={styles.divider} />

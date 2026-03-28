@@ -1,3 +1,4 @@
+import type { LanguageDifficultyBand } from '@/lib/languages';
 import type { LanguageTier } from '@/lib/types';
 
 function normalize(s: string): string {
@@ -31,6 +32,14 @@ export function closenessFromTexts(original: string, reverseEnglish: string): 0 
   return 0;
 }
 
+/** Language bonus by progression band: easy +0, moderate +1, hard +2. */
+export function languageBonusFromBand(band: LanguageDifficultyBand): 0 | 1 | 2 {
+  if (band === 'easy') return 0;
+  if (band === 'moderate') return 1;
+  return 2;
+}
+
+/** @deprecated Prefer languageBonusFromBand; kept for older call sites. */
 export function languageBonusPoints(tier: LanguageTier): 0 | 1 {
   return tier === 'medium' || tier === 'chaos' ? 1 : 0;
 }

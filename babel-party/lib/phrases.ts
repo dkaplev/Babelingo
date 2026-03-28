@@ -127,7 +127,67 @@ export const PHRASES: Phrase[] = [
   p('ab16', 'My keys were in my jacket pocket', 'absurd', 'short'),
   p('ab17', 'I replaced the batteries in the remote', 'absurd', 'medium'),
   p('ab18', 'The recycling truck came early this morning', 'absurd', 'medium'),
+
+  /** Short lines (3–5 words) for warm-up / compact rounds */
+  p('sh1', 'The pizza arrived cold', 'food', 'short'),
+  p('sh2', 'We need more ice', 'food', 'short'),
+  p('sh3', 'She makes great coffee', 'food', 'short'),
+  p('sh4', 'Pass the hot sauce', 'food', 'short'),
+  p('sh5', 'Breakfast was already finished', 'food', 'short'),
+  p('sh6', 'The cat knocked something over', 'animals', 'short'),
+  p('sh7', 'Walk the dog tonight', 'animals', 'short'),
+  p('sh8', 'Birds are loud at dawn', 'animals', 'short'),
+  p('sh9', 'That goldfish looks surprised', 'animals', 'short'),
+  p('sh10', 'Horses hate loud plastic bags', 'animals', 'short'),
+  p('sh11', 'The movie starts soon', 'pop_culture', 'short'),
+  p('sh12', 'Skip this song please', 'pop_culture', 'short'),
+  p('sh13', 'Band practice ran late', 'pop_culture', 'short'),
+  p('sh14', 'I lost the remote again', 'pop_culture', 'short'),
+  p('sh15', 'Rewind that funny part', 'pop_culture', 'short'),
+  p('sh16', 'Meeting moved to Tuesday', 'office', 'short'),
+  p('sh17', 'Reply all by mistake', 'office', 'short'),
+  p('sh18', 'Stapler is missing again', 'office', 'short'),
+  p('sh19', 'Out of toner completely', 'office', 'short'),
+  p('sh20', 'Elevator smells like coffee', 'office', 'short'),
+  p('sh21', 'Bus left without us', 'absurd', 'short'),
+  p('sh22', 'Phone battery is dying', 'absurd', 'short'),
+  p('sh23', 'Wrong floor sorry everyone', 'absurd', 'short'),
+  p('sh24', 'Alarm did not go off', 'absurd', 'short'),
+  p('sh25', 'Forgot my keys inside', 'absurd', 'short'),
+  p('sh26', 'This line is not moving', 'absurd', 'short'),
+  p('sh27', 'Library book is overdue', 'fantasy', 'short'),
+  p('sh28', 'One more chapter tonight', 'fantasy', 'short'),
+  p('sh29', 'Spoilers ruin everything honestly', 'fantasy', 'short'),
 ];
+
+export function phraseWordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+export function pickPhraseFromPool(pool: Phrase[]): Phrase {
+  if (pool.length === 0) return pickPhrase('mixed');
+  return pool[Math.floor(Math.random() * pool.length)]!;
+}
+
+/** Pick a random phrase whose English word count falls in [minWords, maxWords] (inclusive). */
+export function pickPhraseForWordRange(
+  category: PhraseCategory | 'mixed',
+  minWords: number,
+  maxWords: number,
+): Phrase {
+  let pool = category === 'mixed' ? PHRASES : PHRASES.filter((x) => x.category === category);
+  pool = pool.filter((p) => {
+    const n = phraseWordCount(p.text);
+    return n >= minWords && n <= maxWords;
+  });
+  if (pool.length === 0) {
+    pool = PHRASES.filter((p) => {
+      const n = phraseWordCount(p.text);
+      return n >= Math.min(minWords, 6) && n <= Math.max(maxWords, 10);
+    });
+  }
+  return pickPhraseFromPool(pool);
+}
 
 export function pickPhrase(category: PhraseCategory | 'mixed'): Phrase {
   let pool = PHRASES;

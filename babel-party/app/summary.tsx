@@ -1,9 +1,11 @@
+import { MomentSharePanel } from '@/components/MomentSharePanel';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
+import { computeTeamTotals } from '@/lib/teamScores';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -13,8 +15,10 @@ export default function SummaryScreen() {
   const resetSession = useGameStore((s) => s.resetSession);
   const players = useGameStore((s) => s.players);
   const results = useGameStore((s) => s.results);
+  const settings = useGameStore((s) => s.settings);
 
   const winner = useMemo(() => [...players].sort((a, b) => b.totalScore - a.totalScore)[0], [players]);
+  const teamTotals = useMemo(() => computeTeamTotals(players), [players]);
 
   const funniest = useMemo(
     () =>
@@ -38,7 +42,7 @@ export default function SummaryScreen() {
             onPress={() => {
               trackEvent('summary_replay');
               resetSession();
-              router.replace('/create-room');
+              router.replace('/game-mode');
             }}
           />
           <PrimaryButton variant="ghost" title="Home" onPress={() => {
@@ -47,7 +51,28 @@ export default function SummaryScreen() {
           }} />
         </View>
       }>
-      {winner ? (
+      {settings.teamsEnabled && teamTotals ? (
+        <View style={styles.card}>
+          <Text style={styles.kicker}>Winning side</Text>
+          {teamTotals.teamA === teamTotals.teamB ? (
+            <>
+              <Text style={styles.hero}>Draw</Text>
+              <Text style={styles.sub}>Team A and Team B tied at {teamTotals.teamA} pts each</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.hero}>Team {teamTotals.teamA > teamTotals.teamB ? 'A' : 'B'}</Text>
+              <Text style={styles.sub}>
+                {Math.max(teamTotals.teamA, teamTotals.teamB)} combined pts · Team A {teamTotals.teamA} · Team B{' '}
+                {teamTotals.teamB}
+              </Text>
+              {winner ? (
+                <Text style={styles.sub}>Top individual scorer: {winner.name} ({winner.totalScore} pts)</Text>
+              ) : null}
+            </>
+          )}
+        </View>
+      ) : winner ? (
         <View style={styles.card}>
           <Text style={styles.kicker}>Winner</Text>
           <Text style={styles.hero}>{winner.name}</Text>
@@ -69,6 +94,18 @@ export default function SummaryScreen() {
           <Text style={styles.body}>“{closest.reverseEnglish}”</Text>
           <Text style={styles.sub}>— {closest.playerName} ({closest.closenessScore}/3 closeness)</Text>
         </View>
+      ) : null}
+
+      {funniest ? (
+        <MomentSharePanel
+          context="summary"
+          payload={{
+            mangled: funniest.reverseEnglish,
+            originalEnglish: funniest.phraseOriginal,
+            languageLabel: funniest.languageLabel,
+            playerName: funniest.playerName,
+          }}
+        />
       ) : null}
 
       <Text style={styles.footerNote}>

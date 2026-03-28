@@ -1,15 +1,17 @@
-import { filterLanguagesForPreset } from '@/lib/languages';
-import { pickPhrase } from '@/lib/phrases';
+import { defaultLanguagePool, languageCodesForBands } from '@/lib/languages';
+import { pickPhraseForWordRange } from '@/lib/phrases';
+import { roundStageFor, type RoundStage, TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import type { Phrase, Player, RoomSettings, TurnResult } from '@/lib/types';
 import { create } from 'zustand';
 
-/** Max foreign phrase replays per turn; difficulty does not change this. */
+/** Max foreign phrase replays per turn. */
 export const MAX_PHRASE_PLAYS = 3;
 
 type SessionPhase =
   | 'idle'
   | 'lobby'
   | 'instructions'
+  | 'round_intro'
   | 'turn'
   | 'processing'
   | 'reveal'
@@ -32,15 +34,20 @@ type GameState = {
   lastResult: TurnResult | null;
   results: TurnResult[];
   funnyVotePending: boolean;
+  /** Per-turn language for the current round, same order as turns (playerOrder indices). */
+  roundLanguages: string[];
+  /** Phrase for each turn; repeats when a language is reused get a fresh phrase. */
+  roundPhrases: Phrase[];
 };
 
 const defaultSettings = (): RoomSettings => ({
   playerCount: 4,
   teamsEnabled: false,
-  rounds: 3,
-  difficulty: 'spicy',
+  rounds: TOTAL_GAME_ROUNDS,
+  gameMode: 'regular',
+  difficulty: 'chaos',
   category: 'mixed',
-  languageCodes: ['es', 'it', 'fr', 'de', 'el', 'tr', 'ja', 'ar', 'hi'],
+  languageCodes: defaultLanguagePool(),
 });
 
 function shuffle<T>(arr: T[]): T[] {
@@ -52,12 +59,74 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+function languageHistoryFromResults(results: TurnResult[]): Map<string, Set<string>> {
+  const m = new Map<string, Set<string>>();
+  for (const r of results) {
+    let set = m.get(r.playerId);
+    if (!set) {
+      set = new Set();
+      m.set(r.playerId, set);
+    }
+    set.add(r.languageCode);
+  }
+  return m;
+}
+
+/**
+ * Pick one language per player in turn order for this round.
+ * Prefer: not used by that player in earlier rounds, and not already taken this round.
+ * Relax in stages when the pool is too small — see inline comments.
+ */
+function assignLanguagesForRound(pool: string[], playerOrder: string[], history: Map<string, Set<string>>): string[] {
+  if (playerOrder.length === 0) return [];
+  const shuffledPool = shuffle([...pool]);
+  const takenThisRound = new Set<string>();
+  const out: string[] = [];
+
+  for (const playerId of playerOrder) {
+    const usedBefore = history.get(playerId) ?? new Set<string>();
+    let candidates = shuffledPool.filter((l) => !usedBefore.has(l) && !takenThisRound.has(l));
+    if (candidates.length === 0) {
+      candidates = shuffledPool.filter((l) => !usedBefore.has(l));
+    }
+    if (candidates.length === 0) {
+      candidates = shuffledPool.filter((l) => !takenThisRound.has(l));
+    }
+    if (candidates.length === 0) {
+      candidates = [...shuffledPool];
+    }
+    const lang = candidates[Math.floor(Math.random() * candidates.length)]!;
+    out.push(lang);
+    takenThisRound.add(lang);
+  }
+  return out;
+}
+
+/** First time each language appears in the round shares one phrase; later repeats get a new random phrase. */
+function buildRoundPhrasesForStage(roundLanguages: string[], stage: RoundStage): Phrase[] {
+  if (!roundLanguages.length) return [];
+  const base = pickPhraseForWordRange('mixed', stage.phraseMinWords, stage.phraseMaxWords);
+  const phrases: Phrase[] = [];
+  const seenLang = new Set<string>();
+  for (const lang of roundLanguages) {
+    if (seenLang.has(lang)) {
+      phrases.push(pickPhraseForWordRange('mixed', stage.phraseMinWords, stage.phraseMaxWords));
+    } else {
+      seenLang.add(lang);
+      phrases.push(base);
+    }
+  }
+  return phrases;
+}
+
 export const useGameStore = create<
   GameState & {
     resetSession: () => void;
     updateSettings: (partial: Partial<RoomSettings>) => void;
     setPlayerNames: (names: string[]) => void;
     startFromLobby: () => void;
+    /** One atomic update: players + order + instructions phase (avoids empty order between two sets). */
+    startSessionFromLobby: (names: string[]) => void;
     beginRound: () => void;
     nextListenConsumed: () => void;
     skipExtraPhrasePlays: () => void;
@@ -85,6 +154,8 @@ export const useGameStore = create<
   lastResult: null,
   results: [],
   funnyVotePending: false,
+  roundLanguages: [],
+  roundPhrases: [],
 
   resetSession: () =>
     set({
@@ -102,6 +173,8 @@ export const useGameStore = create<
       lastResult: null,
       results: [],
       funnyVotePending: false,
+      roundLanguages: [],
+      roundPhrases: [],
     }),
 
   updateSettings: (partial) =>
@@ -122,35 +195,82 @@ export const useGameStore = create<
   },
 
   startFromLobby: () => {
-    const { players, settings } = get();
+    const { players } = get();
     const order = shuffle(players.map((p) => p.id));
     set({
-      phase: 'instructions',
+      phase: 'round_intro',
       currentRound: 1,
       turnIndex: 0,
       playerOrder: order,
       listensRemaining: MAX_PHRASE_PLAYS,
       lastResult: null,
       pendingRecordingUri: null,
+      results: [],
+      funnyVotePending: false,
+      roundLanguages: [],
+      roundPhrases: [],
+      roundPhrase: null,
+      currentLanguageCode: null,
+      translatedText: null,
+    });
+  },
+
+  startSessionFromLobby: (names) => {
+    const { settings } = get();
+    const teamsEnabled = settings.teamsEnabled;
+    const players: Player[] = names.map((name, i) => ({
+      id: `p${i}`,
+      name: name.trim() || `Player ${i + 1}`,
+      teamId: teamsEnabled ? (i % 2 === 0 ? 'a' : 'b') : null,
+      totalScore: 0,
+    }));
+    const order = shuffle(players.map((p) => p.id));
+    set({
+      players,
+      phase: 'round_intro',
+      currentRound: 1,
+      turnIndex: 0,
+      playerOrder: order,
+      listensRemaining: MAX_PHRASE_PLAYS,
+      lastResult: null,
+      pendingRecordingUri: null,
+      results: [],
+      funnyVotePending: false,
+      roundLanguages: [],
+      roundPhrases: [],
+      roundPhrase: null,
+      currentLanguageCode: null,
+      translatedText: null,
     });
   },
 
   beginRound: () => {
-    const { settings, playerOrder, currentRound } = get();
-    const pool = filterLanguagesForPreset(settings.languageCodes, settings.difficulty);
-    const codes = pool.length ? pool : settings.languageCodes;
-    const phrase = pickPhrase(settings.category);
+    const { settings } = get();
+    let { playerOrder, currentRound, results, players } = get();
+    if (playerOrder.length === 0 && players.length > 0) {
+      playerOrder = shuffle(players.map((p) => p.id));
+    }
+    if (playerOrder.length === 0) return;
+    const stage = roundStageFor(settings.gameMode, currentRound);
+    let codes = languageCodesForBands(stage.languageBands);
+    if (codes.length === 0) codes = defaultLanguagePool();
+    const order = currentRound === 1 ? playerOrder : shuffle(playerOrder);
+    const history = languageHistoryFromResults(results);
+    const roundLanguages = assignLanguagesForRound(codes, order, history);
+    const roundPhrases = buildRoundPhrasesForStage(roundLanguages, stage);
     set({
       phase: 'turn',
-      roundPhrase: phrase,
+      roundPhrase: roundPhrases[0] ?? null,
       turnIndex: 0,
       listensRemaining: MAX_PHRASE_PLAYS,
-      currentLanguageCode: codes[Math.floor(Math.random() * codes.length)]!,
+      currentLanguageCode: roundLanguages[0] ?? codes[0]!,
       translatedText: null,
       pendingRecordingUri: null,
       lastResult: null,
       funnyVotePending: false,
-      playerOrder: currentRound === 1 ? playerOrder : shuffle(playerOrder),
+      playerOrder: order,
+      roundLanguages,
+      roundPhrases,
     });
   },
 
@@ -169,9 +289,10 @@ export const useGameStore = create<
   setPhase: (p) => set({ phase: p }),
 
   pickLanguageForCurrentTurn: () => {
-    const { settings, currentLanguageCode } = get();
-    const pool = filterLanguagesForPreset(settings.languageCodes, settings.difficulty);
-    const codes = pool.length ? pool : settings.languageCodes;
+    const { currentLanguageCode, roundLanguages, turnIndex } = get();
+    const fromRound = roundLanguages[turnIndex];
+    if (fromRound) return fromRound;
+    const codes = defaultLanguagePool();
     if (currentLanguageCode && codes.includes(currentLanguageCode)) return currentLanguageCode;
     return codes[Math.floor(Math.random() * codes.length)]!;
   },
@@ -212,14 +333,17 @@ export const useGameStore = create<
     }),
 
   advanceAfterReveal: () => {
-    const { turnIndex, playerOrder, currentRound, settings } = get();
+    const { turnIndex, playerOrder, roundLanguages, roundPhrases } = get();
     if (turnIndex + 1 < playerOrder.length) {
-      const pool = filterLanguagesForPreset(settings.languageCodes, settings.difficulty);
-      const codes = pool.length ? pool : settings.languageCodes;
+      const codes = defaultLanguagePool();
+      const nextLang =
+        roundLanguages[turnIndex + 1] ?? codes[Math.floor(Math.random() * codes.length)]!;
+      const nextPhrase = roundPhrases[turnIndex + 1] ?? null;
       set({
         turnIndex: turnIndex + 1,
         listensRemaining: MAX_PHRASE_PLAYS,
-        currentLanguageCode: codes[Math.floor(Math.random() * codes.length)]!,
+        currentLanguageCode: nextLang,
+        roundPhrase: nextPhrase,
         translatedText: null,
         pendingRecordingUri: null,
         lastResult: null,
@@ -239,8 +363,8 @@ export const useGameStore = create<
     }
     set({
       currentRound: currentRound + 1,
+      phase: 'round_intro',
     });
-    get().beginRound();
   },
 }));
 

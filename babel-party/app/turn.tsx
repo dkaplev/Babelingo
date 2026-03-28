@@ -33,9 +33,10 @@ export default function TurnScreen() {
   const listensRemaining = useGameStore((s) => s.listensRemaining);
   const setTranslation = useGameStore((s) => s.setTranslation);
   const nextListenConsumed = useGameStore((s) => s.nextListenConsumed);
-  const skipExtraPhrasePlays = useGameStore((s) => s.skipExtraPhrasePlays);
   const setRecordingUri = useGameStore((s) => s.setRecordingUri);
+  const pendingRecordingUri = useGameStore((s) => s.pendingRecordingUri);
   const resetSession = useGameStore((s) => s.resetSession);
+  const phase = useGameStore((s) => s.phase);
 
   const [handoffDone, setHandoffDone] = useState(false);
   const [loadingTts, setLoadingTts] = useState(true);
@@ -50,9 +51,32 @@ export default function TurnScreen() {
   const player = useGameStore((s) => currentPlayer(s));
   const lang = currentLanguageCode ? languageByCode(currentLanguageCode) : undefined;
 
+  const hasListenedOnce = listensRemaining < MAX_PHRASE_PLAYS;
+  const hasRecording = Boolean(pendingRecordingUri);
+  const canStartRecord = hasListenedOnce && !phrasePlaybackBusy && !loadingTts;
+
   useEffect(() => {
     setHandoffDone(false);
   }, [roundPhrase?.id, player?.id]);
+
+  /**
+   * Only bail out when we are actually in the turn phase but state is still invalid.
+   * Otherwise a stale /turn mount (e.g. after returning home) would call resetSession and
+   * wipe a newly started lobby session.
+   */
+  useEffect(() => {
+    if (phase !== 'turn') return;
+    if (roundPhrase && player) return;
+    const timer = setTimeout(() => {
+      const s = useGameStore.getState();
+      if (s.phase !== 'turn') return;
+      const p = currentPlayer(s);
+      if (s.roundPhrase && p) return;
+      resetSession();
+      router.replace('/');
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [roundPhrase?.id, player?.id, phase, resetSession, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -247,11 +271,7 @@ export default function TurnScreen() {
   };
 
   if (!roundPhrase || !player) {
-    return (
-      <Screen title="Turn">
-        <Text style={styles.muted}>Nothing to play — head back and start a room.</Text>
-      </Screen>
-    );
+    return null;
   }
 
   if (!handoffDone) {
@@ -277,15 +297,26 @@ export default function TurnScreen() {
     );
   }
 
+  const playIsPrimary =
+    !loadingTts && !isRecording && listensRemaining > 0 && !hasListenedOnce;
+  const recordIsPrimary = !loadingTts && !isRecording && hasListenedOnce && !hasRecording;
+
   return (
     <Screen
       title={`${player.name}’s turn`}
       subtitle={
         lang
-          ? `${lang.label} · up to ${MAX_PHRASE_PLAYS} phrase replays (${listensRemaining} left)`
+          ? `${lang.label} · tap Play first, then Record, then Submit (${listensRemaining} replays left)`
           : 'Loading…'
       }
-      footer={<PrimaryButton title="Submit turn" onPress={onSubmit} />}>
+      footer={
+        <PrimaryButton
+          title="Submit turn"
+          onPress={onSubmit}
+          disabled={!pendingRecordingUri || isRecording}
+          variant={pendingRecordingUri && !isRecording ? 'primary' : 'dim'}
+        />
+      }>
       {menuRow}
       {translationLoadError ? (
         <Text style={styles.warn}>{translationLoadError}</Text>
@@ -313,36 +344,29 @@ export default function TurnScreen() {
             <PrimaryButton title="Retry translation" onPress={retryTranslation} style={{ marginBottom: 12 }} />
           ) : null}
           <PrimaryButton
-            title="Play foreign phrase"
+            title={listensRemaining <= 0 ? 'No replays left' : '① Play foreign phrase'}
             onPress={() => void onListen()}
-            disabled={listensRemaining <= 0 || phrasePlaybackBusy}
+            disabled={listensRemaining <= 0 || phrasePlaybackBusy || loadingTts}
+            variant={playIsPrimary ? 'primary' : 'dim'}
           />
-          {listensRemaining > 0 ? (
-            <PrimaryButton
-              variant="ghost"
-              title="I am ready to record — skip extra replays"
-              onPress={skipExtraPhrasePlays}
-              style={{ marginTop: 10 }}
-            />
-          ) : null}
-          <Text style={styles.mutedSmall}>
-            Replay the phrase up to {MAX_PHRASE_PLAYS} times, or skip early when you are ready to pronounce it.
-          </Text>
 
-          <View style={{ height: 20 }} />
+          <View style={{ height: 14 }} />
 
           {!isRecording ? (
-            <Pressable
-              style={[styles.recordBtn, phrasePlaybackBusy && styles.recordBtnDisabled]}
+            <PrimaryButton
+              title={hasRecording ? 'Re-record your attempt' : '② Record your attempt'}
               onPress={() => void startRecording()}
-              disabled={phrasePlaybackBusy}>
-              <Text style={styles.recordLabel}>● Record your attempt</Text>
-            </Pressable>
+              disabled={!canStartRecord || phrasePlaybackBusy}
+              variant={recordIsPrimary ? 'primary' : 'dim'}
+            />
           ) : (
             <Pressable style={[styles.recordBtn, styles.recordActive]} onPress={() => void stopRecording()}>
-              <Text style={styles.recordLabel}>■ Stop ({seconds}s)</Text>
+              <Text style={styles.recordLabel}>■ Stop recording ({seconds}s)</Text>
             </Pressable>
           )}
+          <Text style={styles.mutedSmall}>
+            Flow: listen at least once → record → submit. Extra replays optional.
+          </Text>
         </>
       )}
     </Screen>

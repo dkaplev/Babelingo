@@ -1,34 +1,15 @@
+import { BackLink } from '@/components/BackLink';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
-import { LANGUAGES, defaultLanguagePool } from '@/lib/languages';
 import { trackEvent } from '@/lib/analytics';
-import type { DifficultyPreset, PhraseCategory } from '@/lib/types';
+import { defaultLanguagePool } from '@/lib/languages';
 import { useGameStore } from '@/lib/gameStore';
+import { TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-
-const categories: { key: PhraseCategory | 'mixed'; label: string }[] = [
-  { key: 'mixed', label: 'Mixed' },
-  { key: 'pop_culture', label: 'Pop culture' },
-  { key: 'animals', label: 'Animals' },
-  { key: 'food', label: 'Food' },
-  { key: 'fantasy', label: 'Fantasy' },
-  { key: 'office', label: 'Office / work' },
-  { key: 'absurd', label: 'Everyday life' },
-];
-
-const difficulties: { key: DifficultyPreset; label: string; hint: string }[] = [
-  { key: 'chill', label: 'Chill', hint: 'Simpler languages only (e.g. Spanish, Italian, French)' },
-  { key: 'spicy', label: 'Spicy', hint: 'Adds medium languages (e.g. German, Greek, Turkish)' },
-  {
-    key: 'chaos',
-    label: 'Chaos',
-    hint: 'All picks including hard languages (Japanese, Arabic, Hindi)',
-  },
-];
 
 function Stepper(props: {
   label: string;
@@ -66,40 +47,21 @@ export default function CreateRoomScreen() {
   const updateSettings = useGameStore((s) => s.updateSettings);
 
   const [playerCount, setPlayerCount] = useState(settings.playerCount);
-  const [rounds, setRounds] = useState(settings.rounds);
   const [teams, setTeams] = useState(settings.teamsEnabled);
-  const [difficulty, setDifficulty] = useState<DifficultyPreset>(settings.difficulty);
-  const [category, setCategory] = useState<PhraseCategory | 'mixed'>(settings.category);
-  const [langSet, setLangSet] = useState(() => new Set(settings.languageCodes));
-
-  const langList = useMemo(() => defaultLanguagePool(), []);
-
-  const toggleLang = (code: string) => {
-    setLangSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(code)) {
-        if (next.size <= 2) return prev;
-        next.delete(code);
-      } else next.add(code);
-      return next;
-    });
-  };
 
   const onContinue = () => {
     updateSettings({
       playerCount,
-      rounds,
+      rounds: TOTAL_GAME_ROUNDS,
       teamsEnabled: teams,
-      difficulty,
-      category,
-      languageCodes: langList.filter((c) => langSet.has(c)),
+      difficulty: 'chaos',
+      category: 'mixed',
+      languageCodes: defaultLanguagePool(),
     });
     trackEvent('room_created', {
       playerCount,
-      rounds,
+      rounds: TOTAL_GAME_ROUNDS,
       teams,
-      difficulty,
-      category,
     });
     router.push('/lobby');
   };
@@ -107,53 +69,21 @@ export default function CreateRoomScreen() {
   return (
     <Screen
       title="Create room"
-      subtitle="Dial the vibe. You can tweak languages to match your crowd.">
-      <Stepper label="Players" value={playerCount} min={2} max={8} onChange={setPlayerCount} />
-      <Stepper label="Rounds" value={rounds} min={1} max={6} onChange={setRounds} />
+      subtitle="How many people pass the phone — rounds and difficulty follow the mode you picked on the last screen.">
+      <BackLink fallbackHref="/game-mode" />
+      <Stepper label="Players" value={playerCount} min={2} max={16} onChange={setPlayerCount} />
 
       <Text style={styles.section}>Teams</Text>
       <Pressable style={[styles.toggle, teams && styles.toggleOn]} onPress={() => setTeams(!teams)}>
         <Text style={styles.toggleText}>{teams ? 'Teams: A / B' : 'Individuals'}</Text>
       </Pressable>
+      <Text style={styles.teamHint}>
+        {teams
+          ? 'Players alternate A · B · A · B in the lobby. Points still go to whoever held the phone — but the scoreboard and final winner are by team total (sum of both players on that team).'
+          : 'Everyone competes solo; high score wins.'}
+      </Text>
 
-      <Text style={styles.section}>Difficulty</Text>
-      <View style={styles.chips}>
-        {difficulties.map((d) => (
-          <Pressable
-            key={d.key}
-            onPress={() => setDifficulty(d.key)}
-            style={[styles.chip, difficulty === d.key && styles.chipOn]}>
-            <Text style={styles.chipTitle}>{d.label}</Text>
-            <Text style={styles.chipHint}>{d.hint}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Text style={styles.section}>Phrase category</Text>
-      <View style={styles.rowWrap}>
-        {categories.map((c) => (
-          <Pressable
-            key={c.key}
-            onPress={() => setCategory(c.key)}
-            style={[styles.miniChip, category === c.key && styles.miniChipOn]}>
-            <Text style={[styles.miniChipText, category === c.key && styles.miniChipTextOn]}>{c.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Text style={styles.section}>Language pool</Text>
-      <View style={styles.rowWrap}>
-        {LANGUAGES.map((l) => (
-          <Pressable
-            key={l.code}
-            onPress={() => toggleLang(l.code)}
-            style={[styles.miniChip, langSet.has(l.code) && styles.miniChipOn]}>
-            <Text style={[styles.miniChipText, langSet.has(l.code) && styles.miniChipTextOn]}>{l.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <PrimaryButton title="Continue to lobby" onPress={onContinue} style={{ marginTop: 20 }} />
+      <PrimaryButton title="Continue to lobby" onPress={onContinue} style={{ marginTop: 24 }} />
     </Screen>
   );
 }
@@ -193,27 +123,11 @@ const styles = StyleSheet.create({
   },
   toggleOn: { borderColor: Colors.party.accent, backgroundColor: Colors.party.surface2 },
   toggleText: { fontFamily: Font.bodyBold, color: Colors.party.text },
-  chips: { gap: 10 },
-  chip: {
-    padding: 14,
-    borderRadius: 16,
-    backgroundColor: Colors.party.card,
-    borderWidth: 2,
-    borderColor: Colors.party.neonStroke,
+  teamHint: {
+    fontFamily: Font.body,
+    color: Colors.party.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 10,
   },
-  chipOn: { borderColor: Colors.party.accent, backgroundColor: Colors.party.surface2 },
-  chipTitle: { fontFamily: Font.bodyBold, color: Colors.party.text, fontSize: 17 },
-  chipHint: { fontFamily: Font.body, color: Colors.party.textMuted, marginTop: 4, fontSize: 14 },
-  rowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  miniChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: Colors.party.card,
-    borderWidth: 2,
-    borderColor: Colors.party.neonStroke,
-  },
-  miniChipOn: { backgroundColor: Colors.party.accent2, borderColor: Colors.party.accent },
-  miniChipText: { fontFamily: Font.bodyBold, color: Colors.party.text, fontSize: 14 },
-  miniChipTextOn: { color: '#fff' },
 });

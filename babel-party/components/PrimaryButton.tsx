@@ -6,11 +6,13 @@ export function PrimaryButton(props: {
   title: string;
   onPress: () => void;
   disabled?: boolean;
-  variant?: 'primary' | 'ghost';
+  /** `dim` = low-emphasis (secondary step), still tappable unless `disabled`. */
+  variant?: 'primary' | 'ghost' | 'dim';
   style?: ViewStyle;
 }) {
   const { title, onPress, disabled, variant = 'primary', style } = props;
   const ghost = variant === 'ghost';
+  const dim = variant === 'dim';
   return (
     <Pressable
       accessibilityRole="button"
@@ -18,12 +20,12 @@ export function PrimaryButton(props: {
       disabled={disabled}
       style={({ pressed }) => [
         styles.base,
-        ghost ? styles.ghost : styles.primary,
+        ghost ? styles.ghost : dim ? styles.dim : styles.primary,
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
         style,
       ]}>
-      <Text style={[styles.label, ghost && styles.labelGhost]}>{title}</Text>
+      <Text style={[styles.label, ghost && styles.labelGhost, dim && styles.labelDim]}>{title}</Text>
     </Pressable>
   );
 }
@@ -57,12 +59,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderStyle: Platform.OS === 'android' ? 'solid' : 'dashed',
   },
+  dim: {
+    backgroundColor: Colors.party.surface2,
+    minHeight: 52,
+    justifyContent: 'center',
+    borderColor: Colors.party.borderSubtle,
+  },
   pressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.45 },
   label: {
     fontFamily: Font.bodyBold,
     color: '#fff',
-    fontSize: 18,
+    fontSize: 17,
+    lineHeight: 22,
+    textAlign: 'center',
   },
   labelGhost: { color: Colors.party.text },
+  labelDim: { color: Colors.party.textMuted },
 });

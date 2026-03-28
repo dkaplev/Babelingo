@@ -1,8 +1,8 @@
 import { getPipelineBaseUrl } from '@/lib/env';
 import { languageByCode } from '@/lib/languages';
 import { normalizeTranslationText } from '@/lib/normalizeTranslation';
-import { closenessFromTexts, funnyLabel, languageBonusPoints } from '@/lib/scoring';
-import type { PhraseCategory } from '@/lib/types';
+import { closenessFromTexts, funnyLabel, languageBonusFromBand } from '@/lib/scoring';
+import type { PhraseCategory, SttMockReason } from '@/lib/types';
 import { translateEnTo, translateToEnglish } from '@/lib/translate';
 
 const API = getPipelineBaseUrl();
@@ -38,14 +38,15 @@ export type PipelineOutput = {
   recognizedText: string | null;
   reverseEnglish: string;
   closenessScore: 0 | 1 | 2 | 3;
-  languageBonus: 0 | 1;
+  languageBonus: 0 | 1 | 2;
   funnyLabel: string;
   usedMockPipeline: boolean;
+  sttMockReason?: SttMockReason;
 };
 
 export async function runEchoPipeline(input: PipelineInput): Promise<PipelineOutput> {
   const lang = languageByCode(input.languageCode);
-  const tier = lang?.tier ?? 'easy';
+  const band = lang?.difficultyBand ?? 'easy';
 
   if (API) {
     try {
@@ -69,6 +70,7 @@ export async function runEchoPipeline(input: PipelineInput): Promise<PipelineOut
           reverseEnglish?: string;
           closenessScore?: number;
           sttSource?: 'google' | 'mock';
+          sttMockReason?: SttMockReason;
         };
         const reverseEnglish = normalizeTranslationText(
           json.reverseEnglish ?? mockReverseFromOriginal(input.originalEnglish, input.languageCode),
@@ -78,8 +80,11 @@ export async function runEchoPipeline(input: PipelineInput): Promise<PipelineOut
           | 1
           | 2
           | 3;
-        const languageBonus = languageBonusPoints(tier);
-        const usedMockStt = json.sttSource !== 'google';
+        const languageBonus = languageBonusFromBand(band);
+        const hasTranscript = Boolean(json.recognizedText && String(json.recognizedText).trim());
+        /** Treat as mock STT only when the server says so, or when there is no transcript and sttSource was never sent (older APIs). */
+        const usedMockStt =
+          json.sttSource === 'mock' || (json.sttSource == null && !hasTranscript);
         return {
           recognizedText: json.recognizedText ? normalizeTranslationText(json.recognizedText) : null,
           reverseEnglish,
@@ -87,6 +92,7 @@ export async function runEchoPipeline(input: PipelineInput): Promise<PipelineOut
           languageBonus,
           funnyLabel: funnyLabel(closeness),
           usedMockPipeline: usedMockStt,
+          sttMockReason: usedMockStt ? json.sttMockReason : undefined,
         };
       }
     } catch {
@@ -109,7 +115,7 @@ export async function runEchoPipeline(input: PipelineInput): Promise<PipelineOut
     recognizedText: null,
     reverseEnglish,
     closenessScore,
-    languageBonus: languageBonusPoints(tier),
+    languageBonus: languageBonusFromBand(band),
     funnyLabel: funnyLabel(closenessScore),
     usedMockPipeline: true,
   };
