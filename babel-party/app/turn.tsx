@@ -11,6 +11,7 @@ import { forceDevicePhraseTts, getPipelineBaseUrl } from '@/lib/env';
 import { playGoogleTts, stopPipelineTtsPlayback, useGoogleCloudTts } from '@/lib/playGoogleTts';
 import { translateEnToWithMeta, type TranslationSource } from '@/lib/translate';
 import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
@@ -46,6 +47,7 @@ export default function TurnScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [phrasePlaybackBusy, setPhrasePlaybackBusy] = useState(false);
+  const [handoffCountdown, setHandoffCountdown] = useState(3);
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const player = useGameStore((s) => currentPlayer(s));
@@ -54,10 +56,28 @@ export default function TurnScreen() {
   const hasListenedOnce = listensRemaining < MAX_PHRASE_PLAYS;
   const hasRecording = Boolean(pendingRecordingUri);
   const canStartRecord = hasListenedOnce && !phrasePlaybackBusy && !loadingTts;
+  const translationReady = Boolean(translatedText?.trim());
+  const needsTranslationFix =
+    !loadingTts && !translationReady && (translationLoadError != null || translationSource === null);
 
   useEffect(() => {
     setHandoffDone(false);
+    setHandoffCountdown(3);
   }, [roundPhrase?.id, player?.id]);
+
+  useEffect(() => {
+    if (handoffDone || handoffCountdown <= 0) return;
+    const id = setTimeout(() => {
+      setHandoffCountdown((c) => {
+        const next = c - 1;
+        if (next === 0 && Platform.OS !== 'web') {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearTimeout(id);
+  }, [handoffDone, handoffCountdown]);
 
   /**
    * Only bail out when we are actually in the turn phase but state is still invalid.
@@ -229,6 +249,7 @@ export default function TurnScreen() {
     if (phrasePlaybackBusy) return;
     Speech.stop();
     await stopPipelineTtsPlayback();
+    setRecordingUri(null);
     try {
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) return;
@@ -278,14 +299,30 @@ export default function TurnScreen() {
     return (
       <Screen
         title="Host: read to the room"
-        subtitle={`Then pass the phone to ${player.name} without showing this screen again.`}
+        subtitle={`Pass the phone to ${player.name} after the countdown — they should not read this English text.`}
         footer={
           <PrimaryButton
-            title={`${player.name} has the phone — hide phrase`}
+            title={
+              handoffCountdown > 0
+                ? `Pass phone in ${handoffCountdown}…`
+                : `${player.name} has the phone — hide phrase`
+            }
             onPress={() => setHandoffDone(true)}
+            disabled={handoffCountdown > 0}
+            accessibilityLabel={
+              handoffCountdown > 0
+                ? `Wait ${handoffCountdown} seconds before handing over the phone`
+                : `Confirm ${player.name} has the phone and hide the English phrase`
+            }
           />
         }>
         {menuRow}
+        {handoffCountdown > 0 ? (
+          <View style={styles.countdownWrap} accessibilityLiveRegion="polite">
+            <Text style={styles.countdownNum}>{handoffCountdown}</Text>
+            <Text style={styles.countdownHint}>Get ready to pass the device…</Text>
+          </View>
+        ) : null}
         <View style={styles.card}>
           <Text style={styles.whisper}>English phrase — read aloud to the room</Text>
           <Text style={styles.en}>{roundPhrase.text}</Text>
@@ -315,39 +352,41 @@ export default function TurnScreen() {
           onPress={onSubmit}
           disabled={!pendingRecordingUri || isRecording}
           variant={pendingRecordingUri && !isRecording ? 'primary' : 'dim'}
+          accessibilityLabel="Submit turn for processing"
+          accessibilityState={{ selected: Boolean(pendingRecordingUri && !isRecording) }}
         />
       }>
       {menuRow}
-      {translationLoadError ? (
-        <Text style={styles.warn}>{translationLoadError}</Text>
+      {needsTranslationFix ? (
+        <View style={styles.errorCard}>
+          <Text style={styles.warn}>
+            {translationLoadError ??
+              'No translation loaded. Check Wi‑Fi and EXPO_PUBLIC_PIPELINE_URL, then retry.'}
+          </Text>
+          <PrimaryButton title="Retry translation" onPress={retryTranslation} />
+        </View>
       ) : null}
-      {!loadingTts && translationSource === 'offline' ? (
-        <Text style={styles.warn}>
-          No translation service reached — phrase shown as a tagged fallback. Check Wi‑Fi and EXPO_PUBLIC_PIPELINE_URL,
-          then retry.
-        </Text>
-      ) : null}
-      {!loadingTts && translationSource === 'mymemory_fallback' ? (
+
+      {!needsTranslationFix && !loadingTts && translationSource === 'mymemory_fallback' ? (
         <Text style={styles.hint}>
           Your server did not return a translation; using the public fallback translator (rate limits may apply).
         </Text>
       ) : null}
-      {!loadingTts && getPipelineBaseUrl() && !forceDevicePhraseTts() ? (
+      {!needsTranslationFix && !loadingTts && getPipelineBaseUrl() && !forceDevicePhraseTts() ? (
         <Text style={styles.hint}>Foreign phrase plays from your server when possible (loudspeaker-friendly).</Text>
       ) : null}
 
       {loadingTts ? (
         <ActivityIndicator color={Colors.party.accent} style={{ marginVertical: 24 }} />
-      ) : (
+      ) : !needsTranslationFix ? (
         <>
-          {translationSource === 'offline' || translationLoadError ? (
-            <PrimaryButton title="Retry translation" onPress={retryTranslation} style={{ marginBottom: 12 }} />
-          ) : null}
           <PrimaryButton
             title={listensRemaining <= 0 ? 'No replays left' : '① Play foreign phrase'}
             onPress={() => void onListen()}
             disabled={listensRemaining <= 0 || phrasePlaybackBusy || loadingTts}
             variant={playIsPrimary ? 'primary' : 'dim'}
+            accessibilityLabel="Play foreign phrase audio"
+            accessibilityState={{ selected: playIsPrimary }}
           />
 
           <View style={{ height: 14 }} />
@@ -358,9 +397,15 @@ export default function TurnScreen() {
               onPress={() => void startRecording()}
               disabled={!canStartRecord || phrasePlaybackBusy}
               variant={recordIsPrimary ? 'primary' : 'dim'}
+              accessibilityLabel={hasRecording ? 'Re-record your attempt' : 'Record your attempt'}
+              accessibilityState={{ selected: recordIsPrimary }}
             />
           ) : (
-            <Pressable style={[styles.recordBtn, styles.recordActive]} onPress={() => void stopRecording()}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Stop recording"
+              style={[styles.recordBtn, styles.recordActive]}
+              onPress={() => void stopRecording()}>
               <Text style={styles.recordLabel}>■ Stop recording ({seconds}s)</Text>
             </Pressable>
           )}
@@ -368,7 +413,7 @@ export default function TurnScreen() {
             Flow: listen at least once → record → submit. Extra replays optional.
           </Text>
         </>
-      )}
+      ) : null}
     </Screen>
   );
 }
@@ -414,4 +459,34 @@ const styles = StyleSheet.create({
   },
   menuRow: { alignSelf: 'flex-start', marginBottom: 14, paddingVertical: 6, paddingRight: 12 },
   menuText: { fontFamily: Font.bodyBold, color: Colors.party.accent2, fontSize: 16 },
+  countdownWrap: {
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingVertical: 16,
+    borderRadius: 20,
+    backgroundColor: Colors.party.surface2,
+    borderWidth: 3,
+    borderColor: Colors.party.accent2,
+  },
+  countdownNum: {
+    fontFamily: Font.title,
+    fontSize: 56,
+    lineHeight: 62,
+    color: Colors.party.accentPop,
+  },
+  countdownHint: {
+    fontFamily: Font.bodyBold,
+    fontSize: 15,
+    color: Colors.party.textMuted,
+    marginTop: 8,
+  },
+  errorCard: {
+    backgroundColor: Colors.party.card,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 3,
+    borderColor: Colors.party.danger,
+    gap: 14,
+    marginBottom: 16,
+  },
 });

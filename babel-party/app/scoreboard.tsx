@@ -4,6 +4,7 @@ import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
+import { topScorersInRound } from '@/lib/sessionHighlights';
 import { computeTeamTotals } from '@/lib/teamScores';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
@@ -14,10 +15,12 @@ export default function ScoreboardScreen() {
   const players = useGameStore((s) => s.players);
   const settings = useGameStore((s) => s.settings);
   const currentRound = useGameStore((s) => s.currentRound);
+  const results = useGameStore((s) => s.results);
   const goScoreboardToNext = useGameStore((s) => s.goScoreboardToNext);
 
   const sorted = [...players].sort((a, b) => b.totalScore - a.totalScore);
   const teamTotals = useMemo(() => computeTeamTotals(players), [players]);
+  const roundLeaders = useMemo(() => topScorersInRound(results, currentRound), [results, currentRound]);
 
   const onNext = () => {
     goScoreboardToNext();
@@ -38,6 +41,15 @@ export default function ScoreboardScreen() {
           onPress={onNext}
         />
       }>
+      {roundLeaders.length > 0 ? (
+        <View style={styles.heatBanner}>
+          <Text style={styles.heatTitle}>Round {currentRound} — most points this round</Text>
+          <Text style={styles.heatNames}>
+            {roundLeaders.map((l) => `${l.playerName} (+${l.points})`).join(' · ')}
+          </Text>
+        </View>
+      ) : null}
+
       {settings.teamsEnabled && teamTotals ? (
         <View style={styles.teamBanner}>
           <Text style={styles.teamBannerTitle}>Team totals</Text>
@@ -59,7 +71,9 @@ export default function ScoreboardScreen() {
       ) : null}
 
       <View style={styles.list}>
-        {sorted.map((p, idx) => (
+        {sorted.map((p, idx) => {
+          const roundLeader = roundLeaders.some((l) => l.playerId === p.id);
+          return (
           <View
             key={p.id}
             style={[
@@ -67,6 +81,7 @@ export default function ScoreboardScreen() {
               idx === 0 && styles.rowFirst,
               idx === 1 && styles.rowSecond,
               idx === 2 && styles.rowThird,
+              roundLeader && styles.rowRoundLeader,
             ]}>
             <Text style={[styles.rank, idx === 0 && styles.rankLead]}>{idx + 1}</Text>
             <View style={{ flex: 1 }}>
@@ -75,15 +90,51 @@ export default function ScoreboardScreen() {
                 <Text style={styles.team}>Team {p.teamId.toUpperCase()}</Text>
               ) : null}
             </View>
-            <Text style={[styles.pts, idx === 0 && styles.ptsLead]}>{p.totalScore}</Text>
+            <View style={{ alignItems: 'flex-end' }}>
+              {roundLeader ? <Text style={styles.heatTag}>ROUND HEAT</Text> : null}
+              <Text style={[styles.pts, idx === 0 && styles.ptsLead]}>{p.totalScore}</Text>
+            </View>
           </View>
-        ))}
+        );
+        })}
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  heatBanner: {
+    backgroundColor: Colors.party.card,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 2,
+    borderColor: Colors.party.accentPop,
+  },
+  heatTitle: {
+    fontFamily: Font.bodyBold,
+    fontSize: 11,
+    color: Colors.party.accentPop,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 6,
+  },
+  heatNames: {
+    fontFamily: Font.body,
+    fontSize: 16,
+    lineHeight: 24,
+    color: Colors.party.text,
+  },
+  rowRoundLeader: {
+    borderColor: Colors.party.accentPop,
+  },
+  heatTag: {
+    fontFamily: Font.bodyBold,
+    fontSize: 9,
+    color: Colors.party.accentPop,
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
   teamBanner: {
     backgroundColor: Colors.party.surface2,
     borderRadius: 18,

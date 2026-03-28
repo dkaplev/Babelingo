@@ -7,6 +7,8 @@ export const TOTAL_GAME_ROUNDS = 7;
 export type RoundStage = {
   headline: string;
   tagline: string;
+  /** Short tier label for UI (e.g. “Tier 3 · Phrase gym”). */
+  tierBadge: string;
   /** Language pools to draw from this round */
   languageBands: LanguageDifficultyBand[];
   phraseMinWords: number;
@@ -20,6 +22,7 @@ export function regularRoundStage(roundIndex1Based: number): RoundStage {
       return {
         headline: 'Round 1 · Warm-up',
         tagline: 'Short phrases, friendly languages — wake up the room.',
+        tierBadge: 'Tier 1 · Tourist tracks',
         languageBands: ['easy'],
         phraseMinWords: 3,
         phraseMaxWords: 5,
@@ -28,6 +31,7 @@ export function regularRoundStage(roundIndex1Based: number): RoundStage {
       return {
         headline: 'Round 2 · Spicier tongues',
         tagline: 'Still compact lines — but the languages bite back a little.',
+        tierBadge: 'Tier 2 · Border crossing',
         languageBands: ['moderate'],
         phraseMinWords: 3,
         phraseMaxWords: 5,
@@ -36,6 +40,7 @@ export function regularRoundStage(roundIndex1Based: number): RoundStage {
       return {
         headline: 'Round 3 · Stretch mode',
         tagline: 'Easier languages, longer phrases — more syllables to juggle.',
+        tierBadge: 'Tier 3 · Phrase gym',
         languageBands: ['easy'],
         phraseMinWords: 6,
         phraseMaxWords: 7,
@@ -44,6 +49,7 @@ export function regularRoundStage(roundIndex1Based: number): RoundStage {
       return {
         headline: 'Round 4 · Double stack',
         tagline: 'Longer phrases meet trickier languages. Stack the chaos.',
+        tierBadge: 'Tier 4 · Double decker',
         languageBands: ['moderate'],
         phraseMinWords: 6,
         phraseMaxWords: 7,
@@ -52,6 +58,7 @@ export function regularRoundStage(roundIndex1Based: number): RoundStage {
       return {
         headline: 'Round 5 · World-stage heat',
         tagline: 'Hardest languages — we keep the phrase shorter so you can focus.',
+        tierBadge: 'Tier 5 · World stage',
         languageBands: ['hard'],
         phraseMinWords: 3,
         phraseMaxWords: 5,
@@ -60,6 +67,7 @@ export function regularRoundStage(roundIndex1Based: number): RoundStage {
       return {
         headline: 'Round 6 · Boss wave',
         tagline: 'Maximum heat: tough languages and long phrases together.',
+        tierBadge: 'Tier 6 · Boss wave',
         languageBands: ['hard'],
         phraseMinWords: 6,
         phraseMaxWords: 7,
@@ -70,6 +78,7 @@ export function regularRoundStage(roundIndex1Based: number): RoundStage {
         headline:
           roundIndex1Based === 7 ? 'Round 7 · All-out babel' : `Round ${roundIndex1Based} · Encore`,
         tagline: 'Every language in the deck, wild phrase lengths — pure party energy.',
+        tierBadge: roundIndex1Based === 7 ? 'Tier 7 · All-out' : `Tier ${roundIndex1Based} · Encore`,
         languageBands: ['easy', 'moderate', 'hard'],
         phraseMinWords: 4,
         phraseMaxWords: 10,
@@ -78,10 +87,11 @@ export function regularRoundStage(roundIndex1Based: number): RoundStage {
 }
 
 /** Mayhem: always random heat, no micro-phrases. */
-export function mayhemRoundStage(_roundIndex1Based: number): RoundStage {
+export function mayhemRoundStage(roundIndex1Based: number): RoundStage {
   return {
-    headline: 'Mayhem round',
+    headline: `Mayhem · Round ${roundIndex1Based}`,
     tagline: 'Random language, random long line — no tiny phrases, no mercy.',
+    tierBadge: 'Mayhem · No brakes',
     languageBands: ['easy', 'moderate', 'hard'],
     phraseMinWords: 4,
     phraseMaxWords: 10,

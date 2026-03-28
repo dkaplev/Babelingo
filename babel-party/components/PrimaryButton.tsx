@@ -1,6 +1,7 @@
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { Platform, Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
+import type { AccessibilityState } from 'react-native';
 
 export function PrimaryButton(props: {
   title: string;
@@ -9,13 +10,17 @@ export function PrimaryButton(props: {
   /** `dim` = low-emphasis (secondary step), still tappable unless `disabled`. */
   variant?: 'primary' | 'ghost' | 'dim';
   style?: ViewStyle;
+  accessibilityLabel?: string;
+  accessibilityState?: Pick<AccessibilityState, 'selected' | 'busy' | 'expanded'>;
 }) {
-  const { title, onPress, disabled, variant = 'primary', style } = props;
+  const { title, onPress, disabled, variant = 'primary', style, accessibilityLabel, accessibilityState } = props;
   const ghost = variant === 'ghost';
   const dim = variant === 'dim';
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityState={{ ...accessibilityState, disabled: Boolean(disabled) }}
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [
@@ -75,5 +80,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   labelGhost: { color: Colors.party.text },
-  labelDim: { color: Colors.party.textMuted },
+  /** Slightly brighter than textMuted for WCAG-friendly secondary actions on dark panels. */
+  labelDim: { color: '#C8CEF5' },
 });
