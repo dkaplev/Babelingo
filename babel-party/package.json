@@ -11,7 +11,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "submit:ios-testflight": "node ./scripts/eas-submit-ios-testflight.mjs"
+    "submit:ios-testflight": "node ./scripts/eas-submit-ios-testflight.mjs",
+    "version:patch": "node ./scripts/bump-app-version.mjs patch",
+    "version:minor": "node ./scripts/bump-app-version.mjs minor"
   },
   "dependencies": {
     "@expo-google-fonts/press-start-2p": "^0.4.1",

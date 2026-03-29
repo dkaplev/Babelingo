@@ -13,13 +13,21 @@
       "backgroundColor": "#1A1B4B"
     },
     "ios": {
+      "bundleIdentifier": "party.babelingo.app",
+      "buildNumber": "2",
+      "appleTeamId": "UDP2RKPHCF",
       "supportsTablet": true,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Babelingo records your phrase imitation for the Echo Translator reveal."
+        "NSMicrophoneUsageDescription": "Babelingo records your phrase imitation for the Echo Translator reveal.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "permissions": ["android.permission.RECORD_AUDIO"],
+      "package": "party.babelingo.app",
+      "versionCode": 2,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#1A1B4B",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -38,6 +46,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6f9191ef-dc2e-4165-8d3c-7ab740572684"
+      }
+    },
+    "owner": "sammyjoe5000"
   }
 }
