@@ -1,0 +1,1 @@
+Echo Translator, Babel Phone, and Reverse Audio are now on the game picker. Babel Phone chains short English phrases through new languages each turn and shows the full mutation list on the scoreboard. Reverse Audio uses backward phrase playback (requires latest API). UI and copy updates throughout. Please sanity-check all three modes and external pipeline URL in production.

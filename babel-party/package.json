@@ -10,7 +10,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "submit:ios-testflight": "node ./scripts/eas-submit-ios-testflight.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/press-start-2p": "^0.4.1",
