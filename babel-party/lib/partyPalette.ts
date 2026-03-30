@@ -29,9 +29,12 @@ const baseSurfaces = {
   danger: '#FF5C7A',
 };
 
-/** Echo Translator — magenta / cyan / gold (default party look). */
+/** Echo Translator — blue-shifted card vs Babel’s violet so pick-game cards read as three hues. */
 const echo: PartyPalette = {
   ...baseSurfaces,
+  card: '#2A3D78',
+  surface2: '#24356A',
+  borderSubtle: '#3D5288',
   accent: '#D527B7',
   accent2: '#48D6D2',
   accentPop: '#F9C46B',

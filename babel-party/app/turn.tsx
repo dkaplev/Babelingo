@@ -189,7 +189,7 @@ function EchoBabelTurnScreen() {
     await stopPipelineTtsPlayback();
     setPhrasePlaybackBusy(true);
     try {
-      const speakingRate = clampPlaybackSpeed(
+      const playbackRate = clampPlaybackSpeed(
         useGameStore.getState().settings.playbackSpeed ?? PLAYBACK_SPEED_DEFAULT,
       );
       let played = false;
@@ -197,7 +197,7 @@ function EchoBabelTurnScreen() {
       const preferPipeline = Boolean(pipeline) && !forceDevicePhraseTts();
       if (preferPipeline) {
         try {
-          await playGoogleTts(translatedText, lang.speechLocale, { speakingRate });
+          await playGoogleTts(translatedText, lang.speechLocale, { playbackRate });
           played = true;
         } catch {
           /* fall through to device */
@@ -205,7 +205,7 @@ function EchoBabelTurnScreen() {
       }
       if (!played && useGoogleCloudTts()) {
         try {
-          await playGoogleTts(translatedText, lang.speechLocale, { speakingRate });
+          await playGoogleTts(translatedText, lang.speechLocale, { playbackRate });
           played = true;
         } catch {
           /* fall through */
@@ -214,7 +214,7 @@ function EchoBabelTurnScreen() {
       if (!played) {
         await audioModePlaybackSpeaker();
         await new Promise<void>((res) => InteractionManager.runAfterInteractions(() => res()));
-        await speakDeviceTtsUntilDone(translatedText, lang.speechLocale, speakingRate);
+        await speakDeviceTtsUntilDone(translatedText, lang.speechLocale, playbackRate);
       }
       nextListenConsumed();
     } finally {
@@ -521,11 +521,15 @@ function ReverseTurnScreen() {
     setPhrasePlaybackBusy(true);
     try {
       await stopPipelineTtsPlayback();
-      const speakingRate = clampPlaybackSpeed(
+      const playbackRate = clampPlaybackSpeed(
         useGameStore.getState().settings.playbackSpeed ?? PLAYBACK_SPEED_DEFAULT,
       );
-      const b64 = await fetchTtsReversedWavBase64(roundPhrase.text, { speakingRate });
-      await playPipelineWavBase64(b64);
+      const isWeb = Platform.OS === 'web';
+      const b64 = await fetchTtsReversedWavBase64(
+        roundPhrase.text,
+        isWeb ? { speakingRate: playbackRate } : undefined,
+      );
+      await playPipelineWavBase64(b64, { playbackRate: isWeb ? 1 : playbackRate });
       nextListenConsumed();
     } catch (e) {
       setReverseError(e instanceof Error ? e.message : 'Could not play reversed phrase');
@@ -541,7 +545,7 @@ function ReverseTurnScreen() {
     try {
       await stopPipelineTtsPlayback();
       const b64 = await fetchReverseRecordingWavBase64(reverseGuessUri);
-      await playPipelineWavBase64(b64);
+      await playPipelineWavBase64(b64, { playbackRate: 1 });
       nextListenConsumed();
     } catch (e) {
       setReverseError(e instanceof Error ? e.message : 'Could not reverse your recording');
@@ -674,7 +678,7 @@ function ReverseTurnScreen() {
         </View>
       }>
       {menuRow}
-      <PlaybackSpeedSlider hint="Step 1 backward clue uses this rate. Step 2 replays your recording reversed at normal speed." />
+      <PlaybackSpeedSlider hint="Step 1: backward clue is time-stretched on the phone (native) or slowed in synthesis (web). Step 2 stays normal speed." />
 
       {!pipelineOk ? (
         <View style={styles.errorCard}>

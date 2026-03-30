@@ -1,12 +1,13 @@
 import { audioModePlaybackSpeaker } from '@/lib/audioMode';
 import { getPipelineBaseUrl } from '@/lib/env';
-import { Audio } from 'expo-av';
+import { Audio, PitchCorrectionQuality } from 'expo-av';
 import {
   cacheDirectory,
   deleteAsync,
   writeAsStringAsync,
   EncodingType,
 } from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
 
 export function useGoogleCloudTts(): boolean {
   return (
@@ -17,6 +18,12 @@ export function useGoogleCloudTts(): boolean {
 
 type ActiveTts = { sound: Audio.Sound; path: string };
 let activeTts: ActiveTts | null = null;
+
+/** Slider maps to real-time playback speed (expo-av), not only Google synthesis. */
+export function clampPipelinePlaybackRate(r: number): number {
+  if (Number.isNaN(r)) return 1;
+  return Math.min(1, Math.max(0.25, r));
+}
 
 /** Stop server TTS playback (e.g. before recording) so audio does not bleed into the mic phase. */
 export async function stopPipelineTtsPlayback(): Promise<void> {
@@ -41,21 +48,52 @@ export async function stopPipelineTtsPlayback(): Promise<void> {
   }
 }
 
-/** Synthesize via API (Google Cloud TTS) and play through the loudspeaker. */
+async function prepareSoundPlaybackRate(sound: Audio.Sound, playbackRate: number): Promise<void> {
+  const r = clampPipelinePlaybackRate(playbackRate);
+  if (r === 1) return;
+  try {
+    await sound.setRateAsync(r, true, PitchCorrectionQuality.Medium);
+  } catch {
+    /* Web or older Android may not support rate; caller may use server-side speakingRate on web */
+  }
+}
+
+async function waitUntilSoundFinishes(sound: Audio.Sound): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('tts_playback_timeout')), 120_000);
+    sound.setOnPlaybackStatusUpdate((s) => {
+      if (!s.isLoaded) return;
+      if (s.didJustFinish) {
+        clearTimeout(t);
+        resolve();
+      }
+    });
+  });
+}
+
+/**
+ * Synthesize via pipeline (Google MP3) and play through the loudspeaker.
+ * iOS/Android: audio is generated near normal speed, then **timestretched** with expo-av `setRateAsync`
+ * so the slider always changes what you hear.
+ * Web: `setRateAsync` is unreliable — we pass `speakingRate` to `/tts` instead.
+ */
 export async function playGoogleTts(
   text: string,
   languageBcp47: string,
-  opts?: { speakingRate?: number },
+  opts?: { playbackRate?: number },
 ): Promise<void> {
   const base = getPipelineBaseUrl();
   if (!base) throw new Error('missing_pipeline_url');
   await stopPipelineTtsPlayback();
 
+  const playbackRate = clampPipelinePlaybackRate(opts?.playbackRate ?? 1);
   const body: { text: string; languageCode: string; speakingRate?: number } = {
     text,
     languageCode: languageBcp47,
   };
-  if (opts?.speakingRate != null) body.speakingRate = opts.speakingRate;
+  if (Platform.OS === 'web') {
+    body.speakingRate = playbackRate;
+  }
 
   const res = await fetch(`${base}/tts`, {
     method: 'POST',
@@ -75,7 +113,7 @@ export async function playGoogleTts(
 
   const { sound } = await Audio.Sound.createAsync(
     { uri: path },
-    { shouldPlay: true, volume: 1, isMuted: false },
+    { shouldPlay: false, volume: 1, isMuted: false },
   );
   try {
     await sound.setVolumeAsync(1);
@@ -83,18 +121,14 @@ export async function playGoogleTts(
     /* ignore */
   }
 
+  if (Platform.OS !== 'web') {
+    await prepareSoundPlaybackRate(sound, playbackRate);
+  }
+  await sound.playAsync();
+
   activeTts = { sound, path };
   try {
-    await new Promise<void>((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error('tts_playback_timeout')), 120_000);
-      sound.setOnPlaybackStatusUpdate((s) => {
-        if (!s.isLoaded) return;
-        if (s.didJustFinish) {
-          clearTimeout(t);
-          resolve();
-        }
-      });
-    });
+    await waitUntilSoundFinishes(sound);
   } finally {
     if (activeTts?.sound === sound) activeTts = null;
     try {
@@ -110,11 +144,19 @@ export async function playGoogleTts(
   }
 }
 
-/** Play a mono PCM WAV returned as base64 from the pipeline (Reverse Audio). */
-export async function playPipelineWavBase64(audioContentWavBase64: string): Promise<void> {
+/**
+ * Play pipeline WAV (e.g. reversed TTS). Same playback-rate rules as `playGoogleTts`.
+ * Step 2 (user clip reversed) should pass `playbackRate: 1`.
+ */
+export async function playPipelineWavBase64(
+  audioContentWavBase64: string,
+  opts?: { playbackRate?: number },
+): Promise<void> {
   const base = getPipelineBaseUrl();
   if (!base) throw new Error('missing_pipeline_url');
   await stopPipelineTtsPlayback();
+
+  const playbackRate = clampPipelinePlaybackRate(opts?.playbackRate ?? 1);
 
   const dir = cacheDirectory;
   if (!dir) throw new Error('no_cache_directory');
@@ -125,20 +167,17 @@ export async function playPipelineWavBase64(audioContentWavBase64: string): Prom
 
   const { sound } = await Audio.Sound.createAsync(
     { uri: path },
-    { shouldPlay: true, volume: 1, isMuted: false },
+    { shouldPlay: false, volume: 1, isMuted: false },
   );
+
+  if (Platform.OS !== 'web') {
+    await prepareSoundPlaybackRate(sound, playbackRate);
+  }
+  await sound.playAsync();
+
   activeTts = { sound, path };
   try {
-    await new Promise<void>((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error('wav_playback_timeout')), 120_000);
-      sound.setOnPlaybackStatusUpdate((s) => {
-        if (!s.isLoaded) return;
-        if (s.didJustFinish) {
-          clearTimeout(t);
-          resolve();
-        }
-      });
-    });
+    await waitUntilSoundFinishes(sound);
   } finally {
     if (activeTts?.sound === sound) activeTts = null;
     try {

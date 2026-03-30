@@ -34,8 +34,8 @@ export function PlaybackSpeedSlider(props: Props) {
       <Text style={[styles.sub, { color: party.textMuted }]}>
         {hint ??
           (Platform.OS === 'web'
-            ? 'Slower on the left, normal speech on the right (pipeline TTS).'
-            : 'Slower on the left — normal speech on the right. Uses your pipeline TTS rate.')}
+            ? 'Web: slower clips use server-side synthesis. On iOS/Android the app time-stretches playback (expo-av).'
+            : 'Left = slower playback (time-stretch on device). Right = normal speed. Affects phrase audio and backward clue.')}
       </Text>
       <Slider
         style={styles.slider}

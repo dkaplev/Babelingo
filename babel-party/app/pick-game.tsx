@@ -47,9 +47,6 @@ export default function PickGameScreen() {
             <View
               key={g.id}
               style={[styles.card, { borderColor: pal.neonStroke, backgroundColor: pal.card }]}>
-              {g.id === 'babel_phone' ? (
-                <View style={[styles.babelAccentStripe, { backgroundColor: pal.accent2 }]} />
-              ) : null}
               <Text style={[styles.cardTitle, { color: pal.accentPop }]}>{g.title}</Text>
               <Text style={[styles.cardBody, { color: pal.text }]}>{g.body}</Text>
               <PrimaryButton title="Play" onPress={() => choose(g.id)} />
@@ -63,19 +60,12 @@ export default function PickGameScreen() {
 
 const styles = StyleSheet.create({
   stack: { gap: 10, marginTop: 6 },
-  babelAccentStripe: {
-    height: 5,
-    borderRadius: 3,
-    marginBottom: 4,
-    marginTop: -2,
-  },
   card: {
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 16,
     borderWidth: 3,
     gap: 8,
-    overflow: 'hidden',
   },
   cardTitle: {
     fontFamily: Font.title,
