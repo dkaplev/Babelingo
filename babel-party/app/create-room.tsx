@@ -9,7 +9,7 @@ import { useGameStore } from '@/lib/gameStore';
 import { TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import type { AppGameId } from '@/lib/types';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 function Stepper(props: {
@@ -67,83 +67,89 @@ function soloCardCopy(appGame: AppGameId): { title: string; body: string } {
   };
 }
 
+function defaultGroupCount(saved: number): number {
+  if (saved >= 2) return saved;
+  return 4;
+}
+
 export default function CreateRoomScreen() {
   const router = useRouter();
   const settings = useGameStore((s) => s.settings);
   const updateSettings = useGameStore((s) => s.updateSettings);
 
-  const minPlayers = 1;
-  const [playerCount, setPlayerCount] = useState(() =>
-    Math.max(minPlayers, settings.playerCount),
-  );
+  const [groupPlayerCount, setGroupPlayerCount] = useState(() => defaultGroupCount(settings.playerCount));
   const [teams, setTeams] = useState(settings.teamsEnabled);
-  const soloMode = playerCount === 1;
   const soloCopy = soloCardCopy(settings.appGame);
 
-  useEffect(() => {
-    setPlayerCount((c) => Math.max(minPlayers, c));
-  }, [minPlayers]);
-
-  const onContinue = () => {
-    const count = Math.max(minPlayers, playerCount);
-    const solo = count === 1;
+  const applyAndGoLobby = (opts: { playerCount: number; teamsEnabled: boolean; roomMode: 'solo' | 'party' }) => {
     updateSettings({
-      playerCount: count,
+      playerCount: opts.playerCount,
       rounds: TOTAL_GAME_ROUNDS,
-      teamsEnabled: solo ? false : teams,
+      teamsEnabled: opts.teamsEnabled,
       difficulty: 'chaos',
       category: 'mixed',
       languageCodes: defaultLanguagePool(),
     });
     trackEvent('room_created', {
-      playerCount: count,
+      playerCount: opts.playerCount,
       rounds: TOTAL_GAME_ROUNDS,
-      teams: solo ? false : teams,
+      teams: opts.teamsEnabled,
+      room_mode: opts.roomMode,
     });
     router.push('/lobby');
+  };
+
+  const onSoloMode = () => {
+    applyAndGoLobby({ playerCount: 1, teamsEnabled: false, roomMode: 'solo' });
+  };
+
+  const onPartyContinue = () => {
+    applyAndGoLobby({
+      playerCount: groupPlayerCount,
+      teamsEnabled: teams,
+      roomMode: 'party',
+    });
   };
 
   return (
     <Screen
       title="Create room"
-      subtitle={`${gameLabel(settings.appGame)} · ${soloMode ? 'Solo practice or ' : ''}how many pass the phone.`}>
+      subtitle={`${gameLabel(settings.appGame)} · solo or group.`}>
       <BackLink fallbackHref="/game-mode" />
-      <Stepper label="Players" value={playerCount} min={minPlayers} max={16} onChange={setPlayerCount} />
 
-      {soloMode ? (
-        <View style={styles.soloCard}>
-          <Text style={styles.soloTitle}>{soloCopy.title}</Text>
-          <Text style={styles.soloBody}>{soloCopy.body}</Text>
-        </View>
-      ) : null}
+      <View style={styles.soloCard}>
+        <Text style={styles.soloTitle}>{soloCopy.title}</Text>
+        <Text style={styles.soloBody}>{soloCopy.body}</Text>
+      </View>
+      <PrimaryButton title="Solo mode — go to lobby" onPress={onSoloMode} />
 
-      {!soloMode ? (
-        <>
-          <Text style={styles.section}>Teams</Text>
-          <Pressable style={[styles.toggle, teams && styles.toggleOn]} onPress={() => setTeams(!teams)}>
-            <Text style={styles.toggleText}>{teams ? 'Teams: A / B' : 'Individuals'}</Text>
-          </Pressable>
-          <Text style={styles.teamHint}>
-            {teams
-              ? 'Players alternate A · B · A · B in the lobby. Points still go to whoever held the phone — but the scoreboard and final winner are by team total (sum of both players on that team).'
-              : 'Everyone competes solo; high score wins.'}
-          </Text>
-        </>
-      ) : (
-        <Text style={styles.teamHint}>
-          Teams are off with one player — add more people in this step if you want team scoring later.
-        </Text>
-      )}
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or play with a group</Text>
+        <View style={styles.dividerLine} />
+      </View>
 
-      <PrimaryButton title="Continue to lobby" onPress={onContinue} style={{ marginTop: 24 }} />
+      <Stepper label="Players" value={groupPlayerCount} min={2} max={16} onChange={setGroupPlayerCount} />
+
+      <Text style={styles.section}>Teams</Text>
+      <Pressable style={[styles.toggle, teams && styles.toggleOn]} onPress={() => setTeams(!teams)}>
+        <Text style={styles.toggleText}>{teams ? 'Teams: A / B' : 'Individuals'}</Text>
+      </Pressable>
+      <Text style={styles.teamHint}>
+        {teams
+          ? 'Players alternate A · B · A · B in the lobby. Points still go to whoever held the phone — but the scoreboard and final winner are by team total (sum of both players on that team).'
+          : 'Everyone competes solo; high score wins.'}
+      </Text>
+
+      <PrimaryButton title="Continue to lobby (group)" onPress={onPartyContinue} variant="dim" style={{ marginTop: 20 }} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   soloCard: {
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 14,
     padding: 16,
     borderRadius: 16,
     backgroundColor: Colors.party.card,
@@ -164,8 +170,22 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     color: Colors.party.textMuted,
   },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 22,
+  },
+  dividerLine: { flex: 1, height: 2, backgroundColor: Colors.party.borderSubtle, borderRadius: 1 },
+  dividerText: {
+    fontFamily: Font.bodyBold,
+    fontSize: 12,
+    color: Colors.party.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
   section: {
-    marginTop: 20,
+    marginTop: 8,
     marginBottom: 10,
     fontFamily: Font.bodyBold,
     color: Colors.party.textMuted,

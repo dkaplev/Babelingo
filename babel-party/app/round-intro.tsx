@@ -109,7 +109,9 @@ export default function RoundIntroScreen() {
                 scoreboard.
               </Text>
               <Text style={styles.rule}>② Chase higher closeness scores across rounds or use it as quiet rehearsal.</Text>
-              <Text style={styles.rule}>③ Add players in create-room when you want pass-the-phone chaos.</Text>
+              <Text style={styles.rule}>
+                ③ Go back to create-room and use the group player count when you want pass-the-phone chaos.
+              </Text>
             </>
           ) : appGame === 'reverse_audio' ? (
             <>
