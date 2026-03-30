@@ -56,6 +56,13 @@ export function defaultLanguagePool(): string[] {
   return LANGUAGES.map((l) => l.code);
 }
 
+/** Echo Translator: English is never the “foreign” clue language. */
+export function excludeEnglishFromPool(codes: string[]): string[] {
+  const filtered = codes.filter((c) => c !== 'en');
+  if (filtered.length > 0) return filtered;
+  return LANGUAGES.filter((l) => l.code !== 'en').map((l) => l.code);
+}
+
 export function languageCodesForBands(bands: LanguageDifficultyBand[]): string[] {
   const set = new Set<LanguageDifficultyBand>(bands);
   return LANGUAGES.filter((l) => set.has(l.difficultyBand)).map((l) => l.code);

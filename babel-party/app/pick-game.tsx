@@ -13,7 +13,7 @@ const GAMES: { id: AppGameId; title: string; body: string }[] = [
   {
     id: 'echo_translator',
     title: 'Echo Translator',
-    body: 'Foreign audio → mimic → scored. Same line for the round, revealed at the end. Solo (one turn/round) or party.',
+    body: 'Foreign audio → mimic → scored. Listen-speed slider on each turn. Same line each round (solo or party), revealed at the end.',
   },
   {
     id: 'babel_phone',
@@ -23,7 +23,7 @@ const GAMES: { id: AppGameId; title: string; body: string }[] = [
   {
     id: 'reverse_audio',
     title: 'Reverse Audio',
-    body: 'Half-speed backward clue (every listen) → mimic → your clip reversed at normal speed → say the line. English only.',
+    body: 'Backward clue (speed slider) → mimic → your clip reversed at normal speed → say the line. English only.',
   },
 ];
 
@@ -47,6 +47,9 @@ export default function PickGameScreen() {
             <View
               key={g.id}
               style={[styles.card, { borderColor: pal.neonStroke, backgroundColor: pal.card }]}>
+              {g.id === 'babel_phone' ? (
+                <View style={[styles.babelAccentStripe, { backgroundColor: pal.accent2 }]} />
+              ) : null}
               <Text style={[styles.cardTitle, { color: pal.accentPop }]}>{g.title}</Text>
               <Text style={[styles.cardBody, { color: pal.text }]}>{g.body}</Text>
               <PrimaryButton title="Play" onPress={() => choose(g.id)} />
@@ -60,12 +63,19 @@ export default function PickGameScreen() {
 
 const styles = StyleSheet.create({
   stack: { gap: 10, marginTop: 6 },
+  babelAccentStripe: {
+    height: 5,
+    borderRadius: 3,
+    marginBottom: 4,
+    marginTop: -2,
+  },
   card: {
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 16,
     borderWidth: 3,
     gap: 8,
+    overflow: 'hidden',
   },
   cardTitle: {
     fontFamily: Font.title,

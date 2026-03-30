@@ -1,8 +1,10 @@
 import {
   defaultLanguagePool,
+  excludeEnglishFromPool,
   languageCodesForBands,
   type LanguageDifficultyBand,
 } from '@/lib/languages';
+import { PLAYBACK_SPEED_DEFAULT } from '@/lib/playbackSpeed';
 import { pickPhraseForWordRange } from '@/lib/phrases';
 import { roundStageForGame, type RoundStage, TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import type { Phrase, Player, RoomSettings, TurnResult } from '@/lib/types';
@@ -56,6 +58,7 @@ const defaultSettings = (): RoomSettings => ({
   difficulty: 'chaos',
   category: 'mixed',
   languageCodes: defaultLanguagePool(),
+  playbackSpeed: PLAYBACK_SPEED_DEFAULT,
 });
 
 function shuffle<T>(arr: T[]): T[] {
@@ -300,6 +303,9 @@ export const useGameStore = create<
     } else {
       codes = languageCodesForBands(stage.languageBands);
       if (codes.length === 0) codes = defaultLanguagePool();
+    }
+    if (appGame === 'echo_translator') {
+      codes = excludeEnglishFromPool(codes);
     }
     let roundLanguages: string[];
     let roundPhrases: Phrase[];

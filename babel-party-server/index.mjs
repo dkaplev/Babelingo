@@ -118,8 +118,9 @@ async function googleTranslate(text, source, target) {
   return normalizeTranslationText(String(out ?? ''));
 }
 
-async function googleTextToSpeech(text, languageBcp47) {
+async function googleTextToSpeech(text, languageBcp47, speakingRate = 0.95) {
   if (!GOOGLE_KEY) throw new Error('no_google_key');
+  const rate = Math.min(1, Math.max(0.25, Number(speakingRate) || 0.95));
   const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_KEY}`;
   const body = {
     input: { text },
@@ -129,7 +130,7 @@ async function googleTextToSpeech(text, languageBcp47) {
     },
     audioConfig: {
       audioEncoding: 'MP3',
-      speakingRate: 0.95,
+      speakingRate: rate,
     },
   };
   const res = await fetch(url, {
@@ -348,7 +349,11 @@ app.post('/tts', async (req, res) => {
     const languageCode = String(req.body.languageCode ?? 'en-US');
     if (!text) return res.status(400).json({ error: 'missing_text' });
     if (!GOOGLE_KEY) return res.status(503).json({ error: 'tts_requires_google_key' });
-    const audioContent = await googleTextToSpeech(text, languageCode);
+    const speakingRate =
+      req.body.speakingRate != null && req.body.speakingRate !== ''
+        ? Number(req.body.speakingRate)
+        : 0.95;
+    const audioContent = await googleTextToSpeech(text, languageCode, speakingRate);
     res.json({ audioContent });
   } catch (e) {
     console.error(e);

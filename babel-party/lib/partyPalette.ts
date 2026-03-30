@@ -42,16 +42,19 @@ const echo: PartyPalette = {
   podiumBronze: '#B01D94',
 };
 
-/** Babel Phone — violet / electric blue / amber chain. */
+/** Babel Phone — deep violet “chain” panel (distinct from Echo’s navy card). */
 const babel: PartyPalette = {
   ...baseSurfaces,
-  accent: '#8B5CF6',
+  surface2: '#2D1B4E',
+  card: '#3D2668',
+  borderSubtle: '#5B3D8C',
+  accent: '#A78BFA',
   accent2: '#38BDF8',
   accentPop: '#FBBF24',
-  neonStroke: '#A78BFA',
+  neonStroke: '#C4B5FD',
   success: '#38BDF8',
   podiumGold: '#FBBF24',
-  podiumSilver: '#A78BFA',
+  podiumSilver: '#C4B5FD',
   podiumBronze: '#7C3AED',
 };
 

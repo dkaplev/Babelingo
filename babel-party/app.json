@@ -14,7 +14,7 @@
     },
     "ios": {
       "bundleIdentifier": "party.babelingo.app",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "appleTeamId": "UDP2RKPHCF",
       "supportsTablet": true,
       "infoPlist": {

@@ -42,15 +42,25 @@ export async function stopPipelineTtsPlayback(): Promise<void> {
 }
 
 /** Synthesize via API (Google Cloud TTS) and play through the loudspeaker. */
-export async function playGoogleTts(text: string, languageBcp47: string): Promise<void> {
+export async function playGoogleTts(
+  text: string,
+  languageBcp47: string,
+  opts?: { speakingRate?: number },
+): Promise<void> {
   const base = getPipelineBaseUrl();
   if (!base) throw new Error('missing_pipeline_url');
   await stopPipelineTtsPlayback();
 
+  const body: { text: string; languageCode: string; speakingRate?: number } = {
+    text,
+    languageCode: languageBcp47,
+  };
+  if (opts?.speakingRate != null) body.speakingRate = opts.speakingRate;
+
   const res = await fetch(`${base}/tts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, languageCode: languageBcp47 }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`tts_http_${res.status}`);
   const data = (await res.json()) as { audioContent?: string; error?: string };

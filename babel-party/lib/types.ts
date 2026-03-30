@@ -43,6 +43,10 @@ export type RoomSettings = {
   difficulty: DifficultyPreset;
   category: PhraseCategory | 'mixed';
   languageCodes: string[];
+  /**
+   * Phrase / backward-clue TTS speaking rate (Google: 0.25–1). Does not apply to “your clip reversed” in Reverse Audio.
+   */
+  playbackSpeed: number;
 };
 
 /** Why the server used phrase-based mock STT (when `usedMockPipeline` is true). */

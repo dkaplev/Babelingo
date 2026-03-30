@@ -1,4 +1,5 @@
 import { usePartyPalette } from '@/components/GameThemeProvider';
+import { PlaybackSpeedSlider } from '@/components/PlaybackSpeedSlider';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
@@ -6,6 +7,7 @@ import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { audioModePlaybackSpeaker, audioModeRecording } from '@/lib/audioMode';
 import { MAX_PHRASE_PLAYS, currentPlayer, useGameStore } from '@/lib/gameStore';
+import { clampPlaybackSpeed, PLAYBACK_SPEED_DEFAULT } from '@/lib/playbackSpeed';
 import { languageByCode } from '@/lib/languages';
 import { RECORDING_OPTIONS_GOOGLE_STT } from '@/lib/recordingOptions';
 import { forceDevicePhraseTts, getPipelineBaseUrl } from '@/lib/env';
@@ -152,7 +154,7 @@ function EchoBabelTurnScreen() {
     return () => clearTimeout(id);
   }, [passConfirmed]);
 
-  const speakDeviceTtsUntilDone = (text: string, speechLocale: string) =>
+  const speakDeviceTtsUntilDone = (text: string, speechLocale: string, speechRate: number) =>
     new Promise<void>((resolve) => {
       let settled = false;
       const finish = () => {
@@ -160,13 +162,14 @@ function EchoBabelTurnScreen() {
         settled = true;
         resolve();
       };
+      const rate = Math.max(0.25, Math.min(1, speechRate));
       Speech.speak(text, {
         language: speechLocale,
         volume: 1,
         pitch: 1,
+        rate,
         ...(Platform.OS === 'ios'
           ? {
-              rate: 1,
               /** Separate system TTS session — avoids routing to the earpiece with the app’s PlayAndRecord session. */
               useApplicationAudioSession: false,
             }
@@ -186,12 +189,15 @@ function EchoBabelTurnScreen() {
     await stopPipelineTtsPlayback();
     setPhrasePlaybackBusy(true);
     try {
+      const speakingRate = clampPlaybackSpeed(
+        useGameStore.getState().settings.playbackSpeed ?? PLAYBACK_SPEED_DEFAULT,
+      );
       let played = false;
       const pipeline = getPipelineBaseUrl();
       const preferPipeline = Boolean(pipeline) && !forceDevicePhraseTts();
       if (preferPipeline) {
         try {
-          await playGoogleTts(translatedText, lang.speechLocale);
+          await playGoogleTts(translatedText, lang.speechLocale, { speakingRate });
           played = true;
         } catch {
           /* fall through to device */
@@ -199,7 +205,7 @@ function EchoBabelTurnScreen() {
       }
       if (!played && useGoogleCloudTts()) {
         try {
-          await playGoogleTts(translatedText, lang.speechLocale);
+          await playGoogleTts(translatedText, lang.speechLocale, { speakingRate });
           played = true;
         } catch {
           /* fall through */
@@ -208,7 +214,7 @@ function EchoBabelTurnScreen() {
       if (!played) {
         await audioModePlaybackSpeaker();
         await new Promise<void>((res) => InteractionManager.runAfterInteractions(() => res()));
-        await speakDeviceTtsUntilDone(translatedText, lang.speechLocale);
+        await speakDeviceTtsUntilDone(translatedText, lang.speechLocale, speakingRate);
       }
       nextListenConsumed();
     } finally {
@@ -337,6 +343,7 @@ function EchoBabelTurnScreen() {
         />
       }>
       {menuRow}
+      <PlaybackSpeedSlider />
       {needsTranslationFix ? (
         <View style={styles.errorCard}>
           <Text style={styles.warn}>
@@ -443,6 +450,9 @@ function ReverseTurnScreen() {
   const player = useGameStore((s) => currentPlayer(s));
   const players = useGameStore((s) => s.players);
   const solo = players.length === 1;
+  const playbackSpeedLabel = clampPlaybackSpeed(
+    useGameStore((s) => s.settings.playbackSpeed ?? PLAYBACK_SPEED_DEFAULT),
+  );
 
   const hasListenedOnce = listensRemaining < MAX_PHRASE_PLAYS;
   const hasFinalRecording = Boolean(pendingRecordingUri);
@@ -511,7 +521,10 @@ function ReverseTurnScreen() {
     setPhrasePlaybackBusy(true);
     try {
       await stopPipelineTtsPlayback();
-      const b64 = await fetchTtsReversedWavBase64(roundPhrase.text, { speakingRate: 0.5 });
+      const speakingRate = clampPlaybackSpeed(
+        useGameStore.getState().settings.playbackSpeed ?? PLAYBACK_SPEED_DEFAULT,
+      );
+      const b64 = await fetchTtsReversedWavBase64(roundPhrase.text, { speakingRate });
       await playPipelineWavBase64(b64);
       nextListenConsumed();
     } catch (e) {
@@ -600,7 +613,7 @@ function ReverseTurnScreen() {
         title={solo ? 'Your turn' : 'Pass the phone'}
         subtitle={
           solo
-            ? `${player.name}, solo run — the answer stays hidden until the scoreboard. Half-speed backward audio is on the next screen.`
+            ? `${player.name}, solo run — the answer stays hidden until the scoreboard. Use the speed slider on the next screen for the backward clue.`
             : `${player.name} is up. The real phrase is revealed at the end of the round — backward audio is on the next screen.`
         }
         footer={
@@ -614,8 +627,8 @@ function ReverseTurnScreen() {
         <View style={[styles.card, { borderColor: party.neonStroke }]}>
           <Text style={styles.whisper}>Secret until scoreboard</Text>
           <Text style={styles.en}>
-            All backward clue listens are half-speed. After you record your mimic, your clip plays reversed at normal
-            speed before you say the real line.
+            Backward clue speed follows the slider on the next screen (default is slower than normal speech). After you
+            record your mimic, your clip plays reversed at normal speed before you say the real line.
           </Text>
         </View>
       </Screen>
@@ -643,7 +656,7 @@ function ReverseTurnScreen() {
       title={`${player.name} · Reverse Audio`}
       subtitle={
         reverseStep === 1
-          ? 'Step 1 of 2 — slowed backward clue, then mimic'
+          ? 'Step 1 of 2 — backward clue (slider), then mimic'
           : 'Step 2 of 2 — your clip backward, then say the line'
       }
       footer={
@@ -661,6 +674,7 @@ function ReverseTurnScreen() {
         </View>
       }>
       {menuRow}
+      <PlaybackSpeedSlider hint="Step 1 backward clue uses this rate. Step 2 replays your recording reversed at normal speed." />
 
       {!pipelineOk ? (
         <View style={styles.errorCard}>
@@ -685,8 +699,8 @@ function ReverseTurnScreen() {
             ? listensRemaining <= 0
               ? 'Record your backward mimic when ready.'
               : hasListenedOnce
-                ? `Replay backward clue (${listensRemaining} left, all at half-speed) or record your mimic.`
-                : 'Every backward listen is half-speed — then record your mimic.'
+                ? `Replay backward clue (${listensRemaining} left, ${playbackSpeedLabel.toFixed(2)}× each) or record your mimic.`
+                : `Backward clue plays at ${playbackSpeedLabel.toFixed(2)}× (change with slider) — then record your mimic.`
             : listensRemaining <= 0
               ? 'Record the real phrase when ready.'
               : hasListenedOnce
