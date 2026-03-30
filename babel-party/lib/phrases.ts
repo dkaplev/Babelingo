@@ -9,11 +9,18 @@ function p(
   return { id, text, category, length };
 }
 
+function lenForWordCount(wc: number): Phrase['length'] {
+  if (wc <= 5) return 'short';
+  if (wc <= 9) return 'medium';
+  return 'long';
+}
+
 /**
  * Deliberately plain English so humor comes from echo translation, not the setup.
  * Length tags are descriptive only; selection ignores them (random length in play).
+ * @see PHRASES — includes LEGACY_PHRASES plus ~1.2k generated lines for replayability.
  */
-export const PHRASES: Phrase[] = [
+const LEGACY_PHRASES: Phrase[] = [
   p('pc1', 'I am watching a show after dinner tonight', 'pop_culture', 'medium'),
   p('pc2', 'We booked tickets online for the game', 'pop_culture', 'short'),
   p('pc3', 'My brother plays guitar in a local band', 'pop_culture', 'medium'),
@@ -163,6 +170,410 @@ export const PHRASES: Phrase[] = [
 export function phraseWordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
+
+/** ~1.2k templated lines (plain English) — roughly 9× legacy count; total PHRASES ≈10×. */
+function buildMassPhrases(): Phrase[] {
+  const out: Phrase[] = [];
+  let n = 0;
+  const add = (text: string, category: PhraseCategory) => {
+    out.push(p(`mg${n++}`, text, category, lenForWordCount(phraseWordCount(text))));
+  };
+
+  const officeVerbs = [
+    'bought',
+    'sold',
+    'lost',
+    'found',
+    'fixed',
+    'hid',
+    'sent',
+    'read',
+    'wrote',
+    'filed',
+    'saved',
+    'deleted',
+    'printed',
+    'signed',
+    'mailed',
+    'packed',
+    'unpacked',
+    'ordered',
+    'returned',
+    'labeled',
+    'sealed',
+    'opened',
+    'closed',
+    'moved',
+    'copied',
+    'scanned',
+    'uploaded',
+    'downloaded',
+    'shared',
+    'archived',
+  ];
+  const officeNouns = [
+    'report',
+    'invoice',
+    'ticket',
+    'memo',
+    'contract',
+    'spreadsheet',
+    'handout',
+    'manual',
+    'calendar',
+    'folder',
+    'laptop',
+    'keyboard',
+    'charger',
+    'router',
+    'password',
+    'backup',
+    'update',
+    'reminder',
+    'summary',
+    'receipt',
+    'draft',
+    'proposal',
+    'minutes',
+    'agenda',
+    'schedule',
+    'form',
+    'document',
+    'attachment',
+    'reply',
+    'thread',
+  ];
+  const officeTails = [
+    'yesterday',
+    'this morning',
+    'on Friday',
+    'last week',
+    'too late',
+    'from home',
+    'by mistake',
+    'after hours',
+    'before lunch',
+    'without review',
+  ];
+  outer: for (const v of officeVerbs) {
+    for (const noun of officeNouns) {
+      for (const t of officeTails) {
+        if (out.length >= 350) break outer;
+        add(`I ${v} the ${noun} ${t}`, 'office');
+      }
+    }
+  }
+
+  const foodVerbs = [
+    'made',
+    'ate',
+    'ordered',
+    'shared',
+    'skipped',
+    'packed',
+    'heated',
+    'saved',
+    'tasted',
+    'burned',
+  ];
+  const foodItems = [
+    'soup',
+    'bread',
+    'rice',
+    'pasta',
+    'salad',
+    'tacos',
+    'curry',
+    'noodles',
+    'waffles',
+    'omelette',
+    'burrito',
+    'muffins',
+    'smoothie',
+    'latte',
+    'toast',
+    'burger',
+    'sushi',
+    'dumplings',
+    'lasagna',
+    'chili',
+    'gumbo',
+    'risotto',
+    'quiche',
+    'falafel',
+    'pho',
+    'ramen',
+    'pesto',
+    'gnocchi',
+    'couscous',
+    'pilaf',
+  ];
+  const foodCtx = [
+    'for breakfast',
+    'after work',
+    'on Sunday',
+    'at the cafe',
+    'from the truck',
+    'with friends',
+    'before class',
+    'in the rain',
+    'after midnight',
+    'during lunch',
+  ];
+  outer2: for (const fv of foodVerbs) {
+    for (const item of foodItems) {
+      for (const ctx of foodCtx) {
+        if (out.length >= 700) break outer2;
+        add(`We ${fv} some ${item} ${ctx}`, 'food');
+      }
+    }
+  }
+
+  const animals = [
+    'cat',
+    'dog',
+    'bird',
+    'mouse',
+    'goat',
+    'horse',
+    'sheep',
+    'duck',
+    'frog',
+    'gecko',
+    'rabbit',
+    'otter',
+    'eagle',
+    'raven',
+    'beaver',
+    'llama',
+    'donkey',
+    'pig',
+    'cow',
+    'chicken',
+    'turkey',
+    'goose',
+    'toad',
+    'snake',
+    'lizard',
+    'bat',
+    'fox',
+    'deer',
+    'seal',
+    'crab',
+  ];
+  const animalVerbs = [
+    'slept',
+    'waited',
+    'hid',
+    'played',
+    'ate',
+    'drank',
+    'sat',
+    'ran',
+    'rested',
+    'jumped',
+    'stared',
+    'napped',
+    'fled',
+    'perched',
+    'nested',
+    'waddled',
+    'hissed',
+    'darted',
+    'crawled',
+    'chirped',
+  ];
+  const animalPlaces = [
+    'in the yard',
+    'on the porch',
+    'near the barn',
+    'by the gate',
+    'under the deck',
+    'in the shed',
+    'behind the shed',
+    'beside the path',
+    'in tall grass',
+    'near the pond',
+  ];
+  outer3: for (const a of animals) {
+    for (const av of animalVerbs) {
+      for (const pl of animalPlaces) {
+        if (out.length >= 1050) break outer3;
+        add(`The ${a} ${av} ${pl}`, 'animals');
+      }
+    }
+  }
+
+  const popDid = [
+    'watched',
+    'skipped',
+    'recorded',
+    'muted',
+    'paused',
+    'replayed',
+    'discussed',
+    'debated',
+    'spoiled',
+    'reviewed',
+  ];
+  const popShows = [
+    'sitcom',
+    'documentary',
+    'reality show',
+    'game stream',
+    'live concert',
+    'sports rerun',
+    'late show',
+    'morning show',
+    'cooking show',
+    'travel show',
+    'news panel',
+    'radio call-in',
+    'podcast episode',
+    'standup album',
+    'music video',
+    'award clip',
+    'behind scenes',
+    'trailer night',
+    'season finale',
+    'series pilot',
+  ];
+  const popTails = [
+    'last night',
+    'too late',
+    'with cousins',
+    'on the tablet',
+    'during dinner',
+    'after midnight',
+    'by accident',
+    'in silence',
+    'with popcorn',
+    'without subtitles',
+  ];
+  outer4: for (const d of popDid) {
+    for (const s of popShows) {
+      for (const t of popTails) {
+        if (out.length >= 1233) break outer4;
+        add(`We ${d} the ${s} ${t}`, 'pop_culture');
+      }
+    }
+  }
+
+  const bookActs = [
+    'read',
+    'borrowed',
+    'returned',
+    'renewed',
+    'lost',
+    'found',
+    'quoted',
+    'skipped',
+    'reread',
+    'donated',
+  ];
+  const bookKinds = [
+    'mystery novel',
+    'short story',
+    'travel guide',
+    'cookbook',
+    'poetry book',
+    'graphic novel',
+    'history book',
+    'science book',
+    'self help book',
+    'biography',
+    'memoir',
+    'essay collection',
+    'fantasy novel',
+    'thriller',
+    'romance',
+    'anthology',
+    'journal',
+    'diary',
+    'comic annual',
+    'field guide',
+  ];
+  const bookWhen = [
+    'last summer',
+    'on vacation',
+    'at the library',
+    'before bed',
+    'on the train',
+    'during lunch',
+    'in the cafe',
+    'after class',
+    'on holiday',
+    'in winter',
+  ];
+  outer5: for (const ba of bookActs) {
+    for (const bk of bookKinds) {
+      for (const w of bookWhen) {
+        if (out.length >= 1333) break outer5;
+        add(`I ${ba} a ${bk} ${w}`, 'fantasy');
+      }
+    }
+  }
+
+  const absNouns = [
+    'bus',
+    'train',
+    'elevator',
+    'checkout line',
+    'parking meter',
+    'traffic light',
+    'crosswalk',
+    'ticket machine',
+    'laundromat',
+    'vending machine',
+    'ATM line',
+    'post office',
+    'pharmacy counter',
+    'security line',
+    'baggage claim',
+    'bike rack',
+    'water fountain',
+    'bench seat',
+    'turnstile',
+    'escalator',
+    'waiting room',
+  ];
+  const absVerbs = [
+    'was late',
+    'broke down',
+    'ran out',
+    'got stuck',
+    'smelled odd',
+    'made noise',
+    'stopped working',
+    'blinked twice',
+    'ate my coin',
+    'printed wrong',
+  ];
+  const absTail = [
+    'again today',
+    'this morning',
+    'last Tuesday',
+    'near closing',
+    'during rush hour',
+    'in the rain',
+    'without warning',
+    'for no reason',
+    'right on time',
+    'after I left',
+  ];
+  outer6: for (const noun of absNouns) {
+    for (const v of absVerbs) {
+      for (const t of absTail) {
+        if (out.length >= 1533) break outer6;
+        add(`The ${noun} ${v} ${t}`, 'absurd');
+      }
+    }
+  }
+
+  return out;
+}
+
+export const PHRASES: Phrase[] = [...LEGACY_PHRASES, ...buildMassPhrases()];
 
 export function pickPhraseFromPool(pool: Phrase[]): Phrase {
   if (pool.length === 0) return pickPhrase('mixed');
