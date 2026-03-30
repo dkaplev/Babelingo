@@ -4,7 +4,7 @@ import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
-import { babelEnglishChainForRound, topScorersInRound } from '@/lib/sessionHighlights';
+import { babelEnglishChainForRound, roundSeedPhrase, topScorersInRound } from '@/lib/sessionHighlights';
 import { computeTeamTotals } from '@/lib/teamScores';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
@@ -25,6 +25,8 @@ export default function ScoreboardScreen() {
     () => (settings.appGame === 'babel_phone' ? babelEnglishChainForRound(results, currentRound) : []),
     [settings.appGame, results, currentRound],
   );
+  const roundAnswerPhrase = useMemo(() => roundSeedPhrase(results, currentRound), [results, currentRound]);
+  const showRoundPhrase = Boolean(roundAnswerPhrase) && settings.appGame !== 'babel_phone';
 
   const onNext = () => {
     goScoreboardToNext();
@@ -45,6 +47,13 @@ export default function ScoreboardScreen() {
           onPress={onNext}
         />
       }>
+      {showRoundPhrase && roundAnswerPhrase ? (
+        <View style={styles.phraseBanner}>
+          <Text style={styles.phraseTitle}>This round’s line (revealed)</Text>
+          <Text style={styles.phraseLine}>“{roundAnswerPhrase}”</Text>
+        </View>
+      ) : null}
+
       {babelChain.length > 1 ? (
         <View style={styles.chainBanner}>
           <Text style={styles.chainTitle}>Babel Phone — English chain (round {currentRound})</Text>
@@ -118,6 +127,28 @@ export default function ScoreboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  phraseBanner: {
+    backgroundColor: Colors.party.card,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 2,
+    borderColor: Colors.party.accentPop,
+    gap: 8,
+  },
+  phraseTitle: {
+    fontFamily: Font.bodyBold,
+    fontSize: 11,
+    color: Colors.party.accentPop,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  phraseLine: {
+    fontFamily: Font.body,
+    fontSize: 17,
+    lineHeight: 26,
+    color: Colors.party.text,
+  },
   chainBanner: {
     backgroundColor: Colors.party.surface2,
     borderRadius: 16,

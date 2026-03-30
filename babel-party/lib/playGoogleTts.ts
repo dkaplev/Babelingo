@@ -144,13 +144,18 @@ export async function playPipelineWavBase64(audioContentWavBase64: string): Prom
   }
 }
 
-export async function fetchTtsReversedWavBase64(text: string): Promise<string> {
+export async function fetchTtsReversedWavBase64(
+  text: string,
+  opts?: { speakingRate?: number },
+): Promise<string> {
   const base = getPipelineBaseUrl();
   if (!base) throw new Error('missing_pipeline_url');
+  const body: { text: string; speakingRate?: number } = { text };
+  if (opts?.speakingRate != null) body.speakingRate = opts.speakingRate;
   const res = await fetch(`${base.replace(/\/$/, '')}/tts-reversed-wav`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`tts_reversed_${res.status}`);
   const data = (await res.json()) as { audioContentWavBase64?: string };

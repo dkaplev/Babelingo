@@ -43,6 +43,7 @@ export default function LobbyScreen() {
     <Screen
       title="Lobby"
       subtitle={`${shortGameLabel(settings.appGame)} · ${settings.gameMode === 'mayhem' ? 'Mayhem' : 'Regular'} · ${TOTAL_GAME_ROUNDS} rounds · ${settings.teamsEnabled ? 'Team totals win' : 'Solo scoring'}`}
+      keyboardAvoiding
       footer={<PrimaryButton title="Everyone’s in — start" onPress={onStart} />}>
       <BackLink fallbackHref="/create-room" />
       <Text style={styles.hint}>Rename everyone — scores and turns use these names out loud.</Text>

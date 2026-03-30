@@ -57,16 +57,19 @@ export default function CreateRoomScreen() {
     Math.max(minPlayers, settings.playerCount),
   );
   const [teams, setTeams] = useState(settings.teamsEnabled);
+  const reverseSolo = settings.appGame === 'reverse_audio' && playerCount === 1;
 
   useEffect(() => {
     setPlayerCount((c) => Math.max(minPlayers, c));
   }, [minPlayers]);
 
   const onContinue = () => {
+    const count = Math.max(minPlayers, playerCount);
+    const soloReverse = settings.appGame === 'reverse_audio' && count === 1;
     updateSettings({
-      playerCount: Math.max(minPlayers, playerCount),
+      playerCount: count,
       rounds: TOTAL_GAME_ROUNDS,
-      teamsEnabled: teams,
+      teamsEnabled: soloReverse ? false : teams,
       difficulty: 'chaos',
       category: 'mixed',
       languageCodes: defaultLanguagePool(),
@@ -86,15 +89,31 @@ export default function CreateRoomScreen() {
       <BackLink fallbackHref="/game-mode" />
       <Stepper label="Players" value={playerCount} min={minPlayers} max={16} onChange={setPlayerCount} />
 
-      <Text style={styles.section}>Teams</Text>
-      <Pressable style={[styles.toggle, teams && styles.toggleOn]} onPress={() => setTeams(!teams)}>
-        <Text style={styles.toggleText}>{teams ? 'Teams: A / B' : 'Individuals'}</Text>
-      </Pressable>
-      <Text style={styles.teamHint}>
-        {teams
-          ? 'Players alternate A · B · A · B in the lobby. Points still go to whoever held the phone — but the scoreboard and final winner are by team total (sum of both players on that team).'
-          : 'Everyone competes solo; high score wins.'}
-      </Text>
+      {reverseSolo ? (
+        <View style={styles.soloCard}>
+          <Text style={styles.soloTitle}>Reverse Audio · solo practice</Text>
+          <Text style={styles.soloBody}>
+            One player runs every “turn” on the same phone: backward clue → mimic → your clip reversed → say the real
+            line. Compare your closeness scores round to round, or use it as a warm-up before a group game.
+          </Text>
+        </View>
+      ) : null}
+
+      {!reverseSolo ? (
+        <>
+          <Text style={styles.section}>Teams</Text>
+          <Pressable style={[styles.toggle, teams && styles.toggleOn]} onPress={() => setTeams(!teams)}>
+            <Text style={styles.toggleText}>{teams ? 'Teams: A / B' : 'Individuals'}</Text>
+          </Pressable>
+          <Text style={styles.teamHint}>
+            {teams
+              ? 'Players alternate A · B · A · B in the lobby. Points still go to whoever held the phone — but the scoreboard and final winner are by team total (sum of both players on that team).'
+              : 'Everyone competes solo; high score wins.'}
+          </Text>
+        </>
+      ) : (
+        <Text style={styles.teamHint}>Teams are off in solo Reverse Audio — it’s just you vs. the backward audio.</Text>
+      )}
 
       <PrimaryButton title="Continue to lobby" onPress={onContinue} style={{ marginTop: 24 }} />
     </Screen>
@@ -102,6 +121,29 @@ export default function CreateRoomScreen() {
 }
 
 const styles = StyleSheet.create({
+  soloCard: {
+    marginTop: 16,
+    marginBottom: 8,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: Colors.party.card,
+    borderWidth: 3,
+    borderColor: Colors.party.neonStroke,
+    gap: 10,
+  },
+  soloTitle: {
+    fontFamily: Font.bodyBold,
+    fontSize: 13,
+    color: Colors.party.accentPop,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  soloBody: {
+    fontFamily: Font.body,
+    fontSize: 15,
+    lineHeight: 23,
+    color: Colors.party.textMuted,
+  },
   section: {
     marginTop: 20,
     marginBottom: 10,

@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
+import { GameThemeProvider } from '@/components/GameThemeProvider';
 import Colors from '@/constants/Colors';
 import { audioModePlaybackSpeaker } from '@/lib/audioMode';
 
@@ -62,26 +63,28 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={navTheme}>
-      <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: Colors.party.surface },
-        }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="pick-game" />
-        <Stack.Screen name="how-it-works" />
-        <Stack.Screen name="game-mode" />
-        <Stack.Screen name="create-room" />
-        <Stack.Screen name="lobby" />
-        <Stack.Screen name="instructions" />
-        <Stack.Screen name="round-intro" />
-        <Stack.Screen name="turn" />
-        <Stack.Screen name="processing" />
-        <Stack.Screen name="reveal" />
-        <Stack.Screen name="scoreboard" />
-        <Stack.Screen name="summary" />
-      </Stack>
+      <GameThemeProvider>
+        <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: Colors.party.surface },
+          }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="pick-game" />
+          <Stack.Screen name="how-it-works" />
+          <Stack.Screen name="game-mode" />
+          <Stack.Screen name="create-room" />
+          <Stack.Screen name="lobby" />
+          <Stack.Screen name="instructions" />
+          <Stack.Screen name="round-intro" />
+          <Stack.Screen name="turn" />
+          <Stack.Screen name="processing" />
+          <Stack.Screen name="reveal" />
+          <Stack.Screen name="scoreboard" />
+          <Stack.Screen name="summary" />
+        </Stack>
+      </GameThemeProvider>
     </ThemeProvider>
   );
 }

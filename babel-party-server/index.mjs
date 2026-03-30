@@ -148,9 +148,10 @@ async function googleTextToSpeech(text, languageBcp47) {
 
 const TTS_LINEAR16_RATE = 16000;
 
-/** Raw mono PCM16 LE from Google (LINEAR16). */
-async function googleTtsLinear16Pcm(text, languageBcp47) {
+/** Raw mono PCM16 LE from Google (LINEAR16). `speakingRate` 0.25–1.0 per Google TTS. */
+async function googleTtsLinear16Pcm(text, languageBcp47, speakingRate = 0.95) {
   if (!GOOGLE_KEY) throw new Error('no_google_key');
+  const rate = Math.min(1, Math.max(0.25, Number(speakingRate) || 0.95));
   const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_KEY}`;
   const body = {
     input: { text },
@@ -158,7 +159,7 @@ async function googleTtsLinear16Pcm(text, languageBcp47) {
     audioConfig: {
       audioEncoding: 'LINEAR16',
       sampleRateHertz: TTS_LINEAR16_RATE,
-      speakingRate: 0.95,
+      speakingRate: rate,
     },
   };
   const res = await fetch(url, {
@@ -418,7 +419,11 @@ app.post('/tts-reversed-wav', async (req, res) => {
     const text = String(req.body.text ?? '').trim();
     if (!text) return res.status(400).json({ error: 'missing_text' });
     if (!GOOGLE_KEY) return res.status(503).json({ error: 'tts_requires_google_key' });
-    const { pcm, sampleRate } = await googleTtsLinear16Pcm(text, 'en-US');
+    const speakingRate =
+      req.body.speakingRate != null && req.body.speakingRate !== ''
+        ? Number(req.body.speakingRate)
+        : 0.95;
+    const { pcm, sampleRate } = await googleTtsLinear16Pcm(text, 'en-US', speakingRate);
     const rev = reversePcm16LE(pcm);
     const wav = pcm16MonoToWav(rev, sampleRate);
     res.json({ audioContentWavBase64: wav.toString('base64') });

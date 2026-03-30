@@ -52,6 +52,9 @@ async function translateMyMemory(text: string, pair: string): Promise<string | n
 
 /** EN → target with metadata for UI (retry / status banners). */
 export async function translateEnToWithMeta(text: string, languageCode: string): Promise<TranslateEnResult> {
+  if (languageCode === 'en') {
+    return { text: normalizeTranslationText(text), source: 'backend' };
+  }
   const lang = languageByCode(languageCode);
   const target = lang?.myMemoryCode ?? languageCode;
   const hadBackendConfigured = Boolean(apiBase());

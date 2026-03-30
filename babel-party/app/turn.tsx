@@ -1,3 +1,4 @@
+import { usePartyPalette } from '@/components/GameThemeProvider';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
@@ -18,7 +19,6 @@ import {
 } from '@/lib/playGoogleTts';
 import { translateEnToWithMeta, type TranslationSource } from '@/lib/translate';
 import { Audio } from 'expo-av';
-import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
@@ -34,6 +34,7 @@ import {
 } from 'react-native';
 
 function EchoBabelTurnScreen() {
+  const party = usePartyPalette();
   const router = useRouter();
   const roundPhrase = useGameStore((s) => s.roundPhrase);
   const currentLanguageCode = useGameStore((s) => s.currentLanguageCode);
@@ -46,7 +47,7 @@ function EchoBabelTurnScreen() {
   const resetSession = useGameStore((s) => s.resetSession);
   const phase = useGameStore((s) => s.phase);
 
-  const [handoffDone, setHandoffDone] = useState(false);
+  const [passConfirmed, setPassConfirmed] = useState(false);
   const [loadingTts, setLoadingTts] = useState(true);
   const [translationSource, setTranslationSource] = useState<TranslationSource | null>(null);
   const [translationLoadError, setTranslationLoadError] = useState<string | null>(null);
@@ -54,7 +55,6 @@ function EchoBabelTurnScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [phrasePlaybackBusy, setPhrasePlaybackBusy] = useState(false);
-  const [handoffCountdown, setHandoffCountdown] = useState(3);
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const player = useGameStore((s) => currentPlayer(s));
@@ -68,23 +68,8 @@ function EchoBabelTurnScreen() {
     !loadingTts && !translationReady && (translationLoadError != null || translationSource === null);
 
   useEffect(() => {
-    setHandoffDone(false);
-    setHandoffCountdown(3);
+    setPassConfirmed(false);
   }, [roundPhrase?.id, player?.id]);
-
-  useEffect(() => {
-    if (handoffDone || handoffCountdown <= 0) return;
-    const id = setTimeout(() => {
-      setHandoffCountdown((c) => {
-        const next = c - 1;
-        if (next === 0 && Platform.OS !== 'web') {
-          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        }
-        return next;
-      });
-    }, 1000);
-    return () => clearTimeout(id);
-  }, [handoffDone, handoffCountdown]);
 
   /**
    * Only bail out when we are actually in the turn phase but state is still invalid.
@@ -156,14 +141,14 @@ function EchoBabelTurnScreen() {
     };
   }, []);
 
-  /** Warm playback session after handoff so first “Play” isn’t silent (iOS session timing). */
+  /** Warm playback session so first “Play” isn’t silent (iOS session timing). */
   useEffect(() => {
-    if (!handoffDone) return;
+    if (!passConfirmed) return;
     const id = setTimeout(() => {
       void audioModePlaybackSpeaker();
     }, Platform.OS === 'ios' ? 240 : 100);
     return () => clearTimeout(id);
-  }, [handoffDone]);
+  }, [passConfirmed]);
 
   const speakDeviceTtsUntilDone = (text: string, speechLocale: string) =>
     new Promise<void>((resolve) => {
@@ -248,7 +233,7 @@ function EchoBabelTurnScreen() {
 
   const menuRow = (
     <Pressable onPress={confirmMainMenu} style={styles.menuRow} hitSlop={8}>
-      <Text style={styles.menuText}>◀ MAIN MENU</Text>
+      <Text style={[styles.menuText, { color: party.accent2 }]}>◀ MAIN MENU</Text>
     </Pressable>
   );
 
@@ -302,57 +287,38 @@ function EchoBabelTurnScreen() {
     return null;
   }
 
-  if (!handoffDone) {
+  if (!passConfirmed) {
     return (
       <Screen
-        title="Host: read to the room"
-        subtitle={`Pass the phone to ${player.name} after the countdown — they should not read this English text.`}
+        title="Pass the phone"
+        subtitle={`${player.name} is up. The real line stays secret until the round ends — they only get the audio clue on the next screen.`}
         footer={
           <PrimaryButton
-            title={
-              handoffCountdown > 0
-                ? `Pass phone in ${handoffCountdown}…`
-                : `${player.name} has the phone — hide phrase`
-            }
-            onPress={() => setHandoffDone(true)}
-            disabled={handoffCountdown > 0}
-            accessibilityLabel={
-              handoffCountdown > 0
-                ? `Wait ${handoffCountdown} seconds before handing over the phone`
-                : `Confirm ${player.name} has the phone and hide the English phrase`
-            }
+            title={`${player.name} has the phone — continue`}
+            onPress={() => setPassConfirmed(true)}
+            accessibilityLabel={`Confirm ${player.name} is holding the phone`}
           />
         }>
         {menuRow}
-        {handoffCountdown > 0 ? (
-          <View style={styles.countdownWrap} accessibilityLiveRegion="polite">
-            <Text style={styles.countdownNum}>{handoffCountdown}</Text>
-            <Text style={styles.countdownHint}>Get ready to pass the device…</Text>
-          </View>
-        ) : null}
-        <View style={styles.card}>
-          <Text style={styles.whisper}>English phrase — read aloud to the room</Text>
-          <Text style={styles.en}>{roundPhrase.text}</Text>
+        <View style={[styles.card, { borderColor: party.neonStroke }]}>
+          <Text style={styles.whisper}>No peeking</Text>
+          <Text style={styles.en}>
+            Don’t read any English aloud yet. Everyone finds out the phrase at the scoreboard after all turns in this
+            round.
+          </Text>
         </View>
-        <Text style={styles.mutedSmall}>
-          Player should only hear the foreign audio and their own recording — not this text.
-        </Text>
       </Screen>
     );
   }
 
   const playIsPrimary =
-    !loadingTts && !isRecording && listensRemaining > 0 && !hasListenedOnce;
-  const recordIsPrimary = !loadingTts && !isRecording && hasListenedOnce && !hasRecording;
+    !loadingTts && !isRecording && !phrasePlaybackBusy && listensRemaining > 0 && !hasListenedOnce;
+  const recordIsPrimary = !loadingTts && !isRecording && !phrasePlaybackBusy && hasListenedOnce && !hasRecording;
 
   return (
     <Screen
       title={`${player.name}’s turn`}
-      subtitle={
-        lang
-          ? `${lang.label} · tap Play first, then Record, then Submit (${listensRemaining} replays left)`
-          : 'Loading…'
-      }
+      subtitle={lang ? `${lang.label} · listen, then record, then submit` : 'Loading…'}
       footer={
         <PrimaryButton
           title="Submit turn"
@@ -384,11 +350,30 @@ function EchoBabelTurnScreen() {
       ) : null}
 
       {loadingTts ? (
-        <ActivityIndicator color={Colors.party.accent} style={{ marginVertical: 24 }} />
+        <ActivityIndicator color={party.accent} style={{ marginVertical: 24 }} />
       ) : !needsTranslationFix ? (
         <>
+          <View style={[styles.listenStrip, { borderColor: party.accentPop }]}>
+            <Text style={[styles.listenStripTitle, { color: party.accentPop }]}>
+              Listens left: {listensRemaining} / {MAX_PHRASE_PLAYS}
+            </Text>
+            <Text style={styles.listenStripSub}>
+              {listensRemaining <= 0
+                ? 'No replays left — record when you’re ready.'
+                : hasListenedOnce
+                  ? `You can replay up to ${listensRemaining} more time${listensRemaining === 1 ? '' : 's'}, or move on to record.`
+                  : `Tap Play below (${listensRemaining} time${listensRemaining === 1 ? '' : 's'}) — then Record your attempt.`}
+            </Text>
+          </View>
+
           <PrimaryButton
-            title={listensRemaining <= 0 ? 'No replays left' : '① Play foreign phrase'}
+            title={
+              listensRemaining <= 0
+                ? 'No replays left'
+                : hasListenedOnce
+                  ? `Replay foreign phrase (${listensRemaining} left)`
+                  : '① Play foreign phrase'
+            }
             onPress={() => void onListen()}
             disabled={listensRemaining <= 0 || phrasePlaybackBusy || loadingTts}
             variant={playIsPrimary ? 'primary' : 'dim'}
@@ -426,6 +411,7 @@ function EchoBabelTurnScreen() {
 }
 
 function ReverseTurnScreen() {
+  const party = usePartyPalette();
   const router = useRouter();
   const roundPhrase = useGameStore((s) => s.roundPhrase);
   const listensRemaining = useGameStore((s) => s.listensRemaining);
@@ -439,12 +425,11 @@ function ReverseTurnScreen() {
   const commitReverseGuess = useGameStore((s) => s.commitReverseGuess);
   const resetReverseTurn = useGameStore((s) => s.resetReverseTurn);
 
-  const [handoffDone, setHandoffDone] = useState(false);
+  const [passConfirmed, setPassConfirmed] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [phrasePlaybackBusy, setPhrasePlaybackBusy] = useState(false);
-  const [handoffCountdown, setHandoffCountdown] = useState(3);
   const [reverseError, setReverseError] = useState<string | null>(null);
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -457,24 +442,9 @@ function ReverseTurnScreen() {
   const pipelineOk = Boolean(getPipelineBaseUrl());
 
   useEffect(() => {
-    setHandoffDone(false);
-    setHandoffCountdown(3);
+    setPassConfirmed(false);
     setReverseError(null);
   }, [roundPhrase?.id, player?.id]);
-
-  useEffect(() => {
-    if (handoffDone || handoffCountdown <= 0) return;
-    const id = setTimeout(() => {
-      setHandoffCountdown((c) => {
-        const next = c - 1;
-        if (next === 0 && Platform.OS !== 'web') {
-          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        }
-        return next;
-      });
-    }, 1000);
-    return () => clearTimeout(id);
-  }, [handoffDone, handoffCountdown]);
 
   useEffect(() => {
     if (phase !== 'turn') return;
@@ -497,12 +467,12 @@ function ReverseTurnScreen() {
   }, []);
 
   useEffect(() => {
-    if (!handoffDone) return;
+    if (!passConfirmed) return;
     const id = setTimeout(() => {
       void audioModePlaybackSpeaker();
     }, Platform.OS === 'ios' ? 240 : 100);
     return () => clearTimeout(id);
-  }, [handoffDone]);
+  }, [passConfirmed]);
 
   const confirmMainMenu = () => {
     Alert.alert('Leave game?', 'This clears the current session and returns home.', [
@@ -522,7 +492,7 @@ function ReverseTurnScreen() {
 
   const menuRow = (
     <Pressable onPress={confirmMainMenu} style={styles.menuRow} hitSlop={8}>
-      <Text style={styles.menuText}>◀ MAIN MENU</Text>
+      <Text style={[styles.menuText, { color: party.accent2 }]}>◀ MAIN MENU</Text>
     </Pressable>
   );
 
@@ -532,7 +502,8 @@ function ReverseTurnScreen() {
     setPhrasePlaybackBusy(true);
     try {
       await stopPipelineTtsPlayback();
-      const b64 = await fetchTtsReversedWavBase64(roundPhrase.text);
+      const speakingRate = listensRemaining === MAX_PHRASE_PLAYS ? 0.5 : 1;
+      const b64 = await fetchTtsReversedWavBase64(roundPhrase.text, { speakingRate });
       await playPipelineWavBase64(b64);
       nextListenConsumed();
     } catch (e) {
@@ -615,41 +586,25 @@ function ReverseTurnScreen() {
     return null;
   }
 
-  if (!handoffDone) {
+  if (!passConfirmed) {
     return (
       <Screen
-        title="Host: read to the room"
-        subtitle={`Pass the phone to ${player.name} after the countdown — they should not read this English text.`}
+        title="Pass the phone"
+        subtitle={`${player.name} is up. The real phrase is revealed at the end of the round — backward audio is on the next screen.`}
         footer={
           <PrimaryButton
-            title={
-              handoffCountdown > 0
-                ? `Pass phone in ${handoffCountdown}…`
-                : `${player.name} has the phone — hide phrase`
-            }
-            onPress={() => setHandoffDone(true)}
-            disabled={handoffCountdown > 0}
-            accessibilityLabel={
-              handoffCountdown > 0
-                ? `Wait ${handoffCountdown} seconds before handing over the phone`
-                : `Confirm ${player.name} has the phone and hide the English phrase`
-            }
+            title={`${player.name} has the phone — continue`}
+            onPress={() => setPassConfirmed(true)}
+            accessibilityLabel={`Confirm ${player.name} is holding the phone`}
           />
         }>
         {menuRow}
-        {handoffCountdown > 0 ? (
-          <View style={styles.countdownWrap} accessibilityLiveRegion="polite">
-            <Text style={styles.countdownNum}>{handoffCountdown}</Text>
-            <Text style={styles.countdownHint}>Get ready to pass the device…</Text>
-          </View>
-        ) : null}
-        <View style={styles.card}>
-          <Text style={styles.whisper}>English phrase — read aloud to the room</Text>
-          <Text style={styles.en}>{roundPhrase.text}</Text>
+        <View style={[styles.card, { borderColor: party.neonStroke }]}>
+          <Text style={styles.whisper}>Secret until scoreboard</Text>
+          <Text style={styles.en}>
+            The first backward listen is half-speed; any replays play at normal speed so you can double-check details.
+          </Text>
         </View>
-        <Text style={styles.mutedSmall}>
-          Player hears it backward only, then works through the steps on the next screen.
-        </Text>
       </Screen>
     );
   }
@@ -665,15 +620,18 @@ function ReverseTurnScreen() {
   const playIsPrimary =
     !isRecording && listensRemaining > 0 && !hasListenedOnce && !phrasePlaybackBusy;
   const recordIsPrimary =
-    !isRecording && hasListenedOnce && (reverseStep === 1 ? !reverseGuessUri : !hasFinalRecording);
+    !isRecording &&
+    !phrasePlaybackBusy &&
+    hasListenedOnce &&
+    (reverseStep === 1 ? !reverseGuessUri : !hasFinalRecording);
 
   return (
     <Screen
       title={`${player.name} · Reverse Audio`}
       subtitle={
         reverseStep === 1
-          ? `Step 1 of 2 — backward clue, then mimic (${listensRemaining} replays left)`
-          : `Step 2 of 2 — your clip backward, then say the real line (${listensRemaining} replays left)`
+          ? 'Step 1 of 2 — slowed backward clue, then mimic'
+          : 'Step 2 of 2 — your clip backward, then say the line'
       }
       footer={
         <View style={{ gap: 10 }}>
@@ -705,8 +663,33 @@ function ReverseTurnScreen() {
         </View>
       ) : null}
 
+      <View style={[styles.listenStrip, { borderColor: party.accentPop }]}>
+        <Text style={[styles.listenStripTitle, { color: party.accentPop }]}>
+          Listens left: {listensRemaining} / {MAX_PHRASE_PLAYS}
+        </Text>
+        <Text style={styles.listenStripSub}>
+          {reverseStep === 1
+            ? listensRemaining <= 0
+              ? 'Record your backward mimic when ready.'
+              : hasListenedOnce
+                ? `Replay backward clue (${listensRemaining} at normal speed) or record your mimic.`
+                : 'First backward play is half-speed — replays are full speed — then record your mimic.'
+            : listensRemaining <= 0
+              ? 'Record the real phrase when ready.'
+              : hasListenedOnce
+                ? `Replay your clip reversed (${listensRemaining} left) or record the answer.`
+                : 'Listen to your attempt reversed, then record the real phrase.'}
+        </Text>
+      </View>
+
       <PrimaryButton
-        title={listensRemaining <= 0 ? 'No replays left' : playLabel}
+        title={
+          listensRemaining <= 0
+            ? 'No replays left'
+            : hasListenedOnce
+              ? `${reverseStep === 1 ? 'Replay backward clue' : 'Replay reversed clip'} (${listensRemaining} left)`
+              : playLabel
+        }
         onPress={() => void onPlay()}
         disabled={playDisabled}
         variant={playIsPrimary ? 'primary' : 'dim'}
@@ -793,27 +776,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   menuRow: { alignSelf: 'flex-start', marginBottom: 14, paddingVertical: 6, paddingRight: 12 },
-  menuText: { fontFamily: Font.bodyBold, color: Colors.party.accent2, fontSize: 16 },
-  countdownWrap: {
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingVertical: 16,
-    borderRadius: 20,
+  menuText: { fontFamily: Font.bodyBold, fontSize: 16 },
+  listenStrip: {
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 16,
     backgroundColor: Colors.party.surface2,
     borderWidth: 3,
-    borderColor: Colors.party.accent2,
   },
-  countdownNum: {
+  listenStripTitle: {
     fontFamily: Font.title,
-    fontSize: 56,
-    lineHeight: 62,
-    color: Colors.party.accentPop,
+    fontSize: 16,
+    marginBottom: 8,
+    letterSpacing: 0.5,
   },
-  countdownHint: {
-    fontFamily: Font.bodyBold,
+  listenStripSub: {
+    fontFamily: Font.body,
     fontSize: 15,
+    lineHeight: 22,
     color: Colors.party.textMuted,
-    marginTop: 8,
   },
   errorCard: {
     backgroundColor: Colors.party.card,

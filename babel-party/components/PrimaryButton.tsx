@@ -1,4 +1,4 @@
-import Colors from '@/constants/Colors';
+import { usePartyPalette } from '@/components/GameThemeProvider';
 import { Font } from '@/constants/Typography';
 import { Platform, Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
 import type { AccessibilityState } from 'react-native';
@@ -13,6 +13,7 @@ export function PrimaryButton(props: {
   accessibilityLabel?: string;
   accessibilityState?: Pick<AccessibilityState, 'selected' | 'busy' | 'expanded'>;
 }) {
+  const party = usePartyPalette();
   const { title, onPress, disabled, variant = 'primary', style, accessibilityLabel, accessibilityState } = props;
   const ghost = variant === 'ghost';
   const dim = variant === 'dim';
@@ -25,12 +26,36 @@ export function PrimaryButton(props: {
       disabled={disabled}
       style={({ pressed }) => [
         styles.base,
-        ghost ? styles.ghost : dim ? styles.dim : styles.primary,
+        { borderColor: party.neonStroke },
+        ghost
+          ? { ...styles.ghost, backgroundColor: party.card }
+          : dim
+            ? { ...styles.dim, backgroundColor: party.surface2, borderColor: party.borderSubtle }
+            : {
+                ...styles.primary,
+                backgroundColor: party.accent,
+                ...Platform.select({
+                  ios: {
+                    shadowColor: party.accent,
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.55,
+                    shadowRadius: 12,
+                  },
+                  android: { elevation: 4 },
+                }),
+              },
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
         style,
       ]}>
-      <Text style={[styles.label, ghost && styles.labelGhost, dim && styles.labelDim]}>{title}</Text>
+      <Text
+        style={[
+          styles.label,
+          ghost && { color: party.text },
+          dim && styles.labelDim,
+        ]}>
+        {title}
+      </Text>
     </Pressable>
   );
 }
@@ -42,33 +67,19 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: Colors.party.neonStroke,
   },
   primary: {
-    backgroundColor: Colors.party.accent,
     minHeight: 52,
     justifyContent: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.party.accent,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.55,
-        shadowRadius: 12,
-      },
-      android: { elevation: 4 },
-    }),
   },
   ghost: {
-    backgroundColor: Colors.party.card,
     minHeight: 52,
     justifyContent: 'center',
     borderStyle: Platform.OS === 'android' ? 'solid' : 'dashed',
   },
   dim: {
-    backgroundColor: Colors.party.surface2,
     minHeight: 52,
     justifyContent: 'center',
-    borderColor: Colors.party.borderSubtle,
   },
   pressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.45 },
@@ -79,7 +90,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'center',
   },
-  labelGhost: { color: Colors.party.text },
   /** Slightly brighter than textMuted for WCAG-friendly secondary actions on dark panels. */
   labelDim: { color: '#C8CEF5' },
 });

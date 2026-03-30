@@ -4,6 +4,15 @@ export function resultsForRound(results: TurnResult[], roundNumber: number): Tur
   return results.filter((r) => r.roundNumber === roundNumber);
 }
 
+/** First English seed phrase for the round (same for every turn in Echo / Reverse; Babel chain step 0). */
+export function roundSeedPhrase(results: TurnResult[], roundNumber: number): string | null {
+  const inRound = resultsForRound(results, roundNumber);
+  if (inRound.length === 0) return null;
+  const sorted = [...inRound].sort((a, b) => a.turnOrderInRound - b.turnOrderInRound);
+  const text = sorted[0]?.phraseOriginal?.trim();
+  return text || null;
+}
+
 /** Babel Phone: ordered English mutations for the round (seed → each player’s echo-back). */
 export function babelEnglishChainForRound(results: TurnResult[], roundNumber: number): string[] {
   const inRound = resultsForRound(results, roundNumber).sort(

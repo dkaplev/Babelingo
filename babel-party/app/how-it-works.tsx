@@ -5,15 +5,17 @@ import { Font } from '@/constants/Typography';
 import { StyleSheet, Text, View } from 'react-native';
 
 const steps = [
-  'You get a plain English line in the room, then hear it in a foreign language on the phone.',
-  'Hit Play at least once, then record your attempt (extra replays optional) — then submit for the reveal.',
-  'Your imitation is transcribed and translated back to English for the reveal.',
-  'The fun is normal words turning strange — then laugh and pass the phone.',
+  'Use one shared phone and pass it to whoever is up. Let them finish their turn before you take it back — no peeking at answers meant for later.',
+  'Keep the room loud and kind: hype messy tries, laugh at the weird sounds, and save quiet judging for after the round.',
+  'Use replays when the game offers them — rushing someone who is still listening usually kills the joke.',
+  'Take short breaks between rounds (drinks, stretch, swap seats) so the group stays engaged for the whole night.',
 ];
 
 export default function HowItWorksScreen() {
   return (
-    <Screen title="How it works" subtitle="Echo Translator in one shared device — fast, silly, social.">
+    <Screen
+      title="How it works"
+      subtitle="General tips for any Babelingo game — Echo, Babel Phone, or Reverse Audio.">
       <BackLink fallbackHref="/" />
       <View style={styles.list}>
         {steps.map((s, i) => (
@@ -26,7 +28,7 @@ export default function HowItWorksScreen() {
         ))}
       </View>
       <Text style={styles.note}>
-        Tip: put the phone on speaker so the room can share the suspense before the reveal.
+        Tip: when the room is stuck on a rule, read the quick rules on round 1 together — then play first and argue later.
       </Text>
     </Screen>
   );

@@ -73,14 +73,21 @@ export function regularRoundStage(roundIndex1Based: number): RoundStage {
         phraseMaxWords: 7,
       };
     case 7:
+      return {
+        headline: 'Round 7 · Final boss',
+        tagline: 'Hardest languages only, longest lines — peak chaos to close the night.',
+        tierBadge: 'Tier 7 · Maximum heat',
+        languageBands: ['hard'],
+        phraseMinWords: 7,
+        phraseMaxWords: 10,
+      };
     default:
       return {
-        headline:
-          roundIndex1Based === 7 ? 'Round 7 · All-out babel' : `Round ${roundIndex1Based} · Encore`,
-        tagline: 'Every language in the deck, wild phrase lengths — pure party energy.',
-        tierBadge: roundIndex1Based === 7 ? 'Tier 7 · All-out' : `Tier ${roundIndex1Based} · Encore`,
-        languageBands: ['easy', 'moderate', 'hard'],
-        phraseMinWords: 4,
+        headline: `Round ${roundIndex1Based} · Encore`,
+        tagline: 'Same final-boss rules — hardest pool, long phrases.',
+        tierBadge: `Tier ${roundIndex1Based} · Encore`,
+        languageBands: ['hard'],
+        phraseMinWords: 7,
         phraseMaxWords: 10,
       };
   }
@@ -117,11 +124,16 @@ export function roundStageForGame(
     };
   }
   if (appGame === 'reverse_audio') {
+    const tagline =
+      mode === 'mayhem'
+        ? 'English only — backward audio, random phrase lengths each round.'
+        : 'English only — you hear the line backward, then untangle it forward.';
     return {
       ...base,
       languageBands: ['easy'],
       phraseMinWords: 4,
       phraseMaxWords: 6,
+      tagline,
     };
   }
   return base;

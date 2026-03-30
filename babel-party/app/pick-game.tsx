@@ -1,10 +1,10 @@
 import { BackLink } from '@/components/BackLink';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
-import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
+import { getPartyPalette } from '@/lib/partyPalette';
 import type { AppGameId } from '@/lib/types';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
@@ -13,17 +13,17 @@ const GAMES: { id: AppGameId; title: string; body: string }[] = [
   {
     id: 'echo_translator',
     title: 'Echo Translator',
-    body: 'Everyone shares one English line per round. Each player hears it in a different language, repeats what they can, and we translate the recording back to English.',
+    body: 'Foreign audio clue → you mimic → scored. Same English line for the round, revealed at the end.',
   },
   {
     id: 'babel_phone',
     title: 'Babel Phone',
-    body: 'Short phrases, languages get spicier each round. Each player hears the line in a new language — but the English line updates from the previous player’s “translation back.” After the round, see the full mutation chain.',
+    body: 'Each turn hears a new language; English mutates down the chain. Full chain shows on the scoreboard.',
   },
   {
     id: 'reverse_audio',
     title: 'Reverse Audio',
-    body: 'English only: hear the line played backward, mimic it, hear your own clip backward, then say the real phrase. Works solo or as a pass-the-phone relay.',
+    body: 'Backward clue → mimic → forward phrase. English only; solo or pass-the-phone.',
   },
 ];
 
@@ -38,38 +38,43 @@ export default function PickGameScreen() {
   };
 
   return (
-    <Screen title="Pick a game" subtitle="Same app, three different kinds of chaos.">
+    <Screen title="Pick a game" subtitle="Three modes — tap a card to continue.">
       <BackLink fallbackHref="/" />
-      {GAMES.map((g) => (
-        <View key={g.id} style={styles.card}>
-          <Text style={styles.cardTitle}>{g.title}</Text>
-          <Text style={styles.cardBody}>{g.body}</Text>
-          <PrimaryButton title={`Play ${g.title}`} onPress={() => choose(g.id)} />
-        </View>
-      ))}
+      <View style={styles.stack}>
+        {GAMES.map((g) => {
+          const pal = getPartyPalette(g.id);
+          return (
+            <View
+              key={g.id}
+              style={[styles.card, { borderColor: pal.neonStroke, backgroundColor: pal.card }]}>
+              <Text style={[styles.cardTitle, { color: pal.accentPop }]}>{g.title}</Text>
+              <Text style={[styles.cardBody, { color: pal.text }]}>{g.body}</Text>
+              <PrimaryButton title="Play" onPress={() => choose(g.id)} />
+            </View>
+          );
+        })}
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  stack: { gap: 10, marginTop: 6 },
   card: {
-    marginTop: 14,
-    padding: 18,
-    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
     borderWidth: 3,
-    borderColor: Colors.party.neonStroke,
-    backgroundColor: Colors.party.card,
-    gap: 12,
+    gap: 8,
   },
   cardTitle: {
     fontFamily: Font.title,
-    fontSize: 14,
-    color: Colors.party.accentPop,
+    fontSize: 15,
+    letterSpacing: 0.3,
   },
   cardBody: {
     fontFamily: Font.body,
-    fontSize: 16,
-    color: Colors.party.text,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

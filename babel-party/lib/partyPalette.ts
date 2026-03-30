@@ -1,0 +1,77 @@
+import type { AppGameId } from '@/lib/types';
+
+/** Visual theme per game mode (accents + neon); base surfaces stay readable on dark. */
+export type PartyPalette = {
+  accent: string;
+  accent2: string;
+  accentPop: string;
+  surface: string;
+  surface2: string;
+  card: string;
+  text: string;
+  textMuted: string;
+  borderSubtle: string;
+  neonStroke: string;
+  danger: string;
+  success: string;
+  podiumGold: string;
+  podiumSilver: string;
+  podiumBronze: string;
+};
+
+const baseSurfaces = {
+  surface: '#1A1B4B',
+  surface2: '#24285F',
+  card: '#2A2E72',
+  text: '#F4F6FF',
+  textMuted: '#9BA3E8',
+  borderSubtle: '#3D4278',
+  danger: '#FF5C7A',
+};
+
+/** Echo Translator — magenta / cyan / gold (default party look). */
+const echo: PartyPalette = {
+  ...baseSurfaces,
+  accent: '#D527B7',
+  accent2: '#48D6D2',
+  accentPop: '#F9C46B',
+  neonStroke: '#48D6D2',
+  success: '#48D6D2',
+  podiumGold: '#F9C46B',
+  podiumSilver: '#48D6D2',
+  podiumBronze: '#B01D94',
+};
+
+/** Babel Phone — violet / electric blue / amber chain. */
+const babel: PartyPalette = {
+  ...baseSurfaces,
+  accent: '#8B5CF6',
+  accent2: '#38BDF8',
+  accentPop: '#FBBF24',
+  neonStroke: '#A78BFA',
+  success: '#38BDF8',
+  podiumGold: '#FBBF24',
+  podiumSilver: '#A78BFA',
+  podiumBronze: '#7C3AED',
+};
+
+/** Reverse Audio — emerald / mint / lime on deep teal card bias. */
+const reverse: PartyPalette = {
+  ...baseSurfaces,
+  card: '#1E3D3A',
+  surface2: '#243F3C',
+  accent: '#10B981',
+  accent2: '#5EEAD4',
+  accentPop: '#BEF264',
+  neonStroke: '#34D399',
+  success: '#5EEAD4',
+  podiumGold: '#BEF264',
+  podiumSilver: '#5EEAD4',
+  podiumBronze: '#059669',
+};
+
+export function getPartyPalette(appGame: AppGameId): PartyPalette {
+  if (appGame === 'babel_phone') return babel;
+  if (appGame === 'reverse_audio') return reverse;
+  return echo;
+}

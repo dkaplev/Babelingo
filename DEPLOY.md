@@ -60,18 +60,60 @@ The server holds **Google Cloud credentials** and exposes `/translate`, `/tts`, 
 
 ## 2. Mobile app (`babel-party`)
 
-Expo apps are **not** hosted like a website for store builds. Typical flow:
+The game is a **native mobile app** (mic, TTS, recording). You don’t “host” it like a PHP site on a VPS — you **build installable binaries in the cloud** with **EAS Build**, then people install from a link, TestFlight, or the stores. Your **laptop is only needed to start a build**, not to run the game at the party.
 
-1. **EAS Build** (Expo Application Services) produces `.ipa` / `.aab`.
-2. **TestFlight / Play internal testing** for testers.
-3. **App Store / Play Store** for production.
+### One-time setup (from any machine)
+
+Use **`npx`** so you never need a global install (avoids `EACCES` on macOS when `/usr/local/lib/node_modules` is not writable):
+
+```bash
+cd Babelingo/babel-party    # or: cd to wherever `babel-party` lives in your clone
+npx eas-cli@latest login
+npx eas-cli@latest init     # links the folder to an Expo project (adds projectId in app.json if needed)
+```
+
+For later commands, same pattern: `npx eas-cli@latest build ...`, `npx eas-cli@latest whoami`, etc.
+
+**If you prefer a global `eas` command:** either fix npm’s global directory (see [npm docs on permission errors](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally)) or run `sudo npm install -g eas-cli` (works but is easy to regret long-term).
+
+**`cd: no such file or directory: babel-party`:** you were already inside `babel-party`, or your shell was not at the repo root. From `Cursor_Project_1`, use `cd Babelingo/babel-party` (adjust if your folders differ).
+
+- **Apple:** configure signing in EAS (team, distribution certificate). First iOS build walks you through this.
+- **Android:** EAS can create a keystore for you or use your own.
+
+`app.json` already sets **`ios.bundleIdentifier`** and **`android.package`** to `party.babelingo.app` — change both if that id is taken.
+
+### Build installable apps (no Metro, no laptop at the event)
+
+Set **`EXPO_PUBLIC_PIPELINE_URL`** in the [Expo environment variables](https://expo.dev) for the profiles you use (`preview`, `production`), **or** prefix the command:
+
+```bash
+EXPO_PUBLIC_PIPELINE_URL=https://YOUR_API_HOST npx eas-cli@latest build --profile preview --platform ios
+EXPO_PUBLIC_PIPELINE_URL=https://YOUR_API_HOST npx eas-cli@latest build --profile preview --platform android
+```
+
+Open the build on [expo.dev](https://expo.dev): you get an **Install** link (iOS internal/ad hoc per your credentials) or an **APK/AAB** for Android (sideload or Play internal track).
+
+For store release:
+
+```bash
+npx eas-cli@latest build --profile production --platform all
+npx eas-cli@latest submit -p ios
+npx eas-cli@latest submit -p android
+```
+
+Typical flow:
+
+1. **EAS Build** produces `.ipa` / `.aab` in the cloud.
+2. **Internal / TestFlight / Play internal testing** for friends.
+3. **App Store / Play Store** when you’re ready.
 
 ### Point the app at the hosted API
 
 Set at build time (embedded in the JS bundle):
 
 ```bash
-EXPO_PUBLIC_PIPELINE_URL=https://YOUR_API_HOST eas build --platform ios --profile production
+EXPO_PUBLIC_PIPELINE_URL=https://YOUR_API_HOST npx eas-cli@latest build --platform ios --profile production
 ```
 
 Or define **`EXPO_PUBLIC_PIPELINE_URL`** in the [EAS Environment Variables](https://docs.expo.dev/eas/environment-variables/) UI for the `production` profile (recommended — no secrets to Google in the client; this is only your **public** API base URL).
@@ -95,7 +137,7 @@ After launch, use **EAS Update** to ship JS/asset changes without a full store r
 |-------|--------|
 | 3–4 Echo Translator, multi-round, scoreboard | In app |
 | 5 Analytics | Client → `/analytics` when API URL set + `LOG_ANALYTICS=1` on server |
-| 5 Share card | Not built — next polish item |
+| 5 Share card | Image poster + system share (`react-native-view-shot` + `expo-sharing`) |
 | 2 DB / Supabase / Firebase | Still optional for shared-device MVP; add when you need rooms across devices |
 
 ---

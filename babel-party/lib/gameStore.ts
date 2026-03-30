@@ -1,4 +1,8 @@
-import { defaultLanguagePool, languageCodesForBands } from '@/lib/languages';
+import {
+  defaultLanguagePool,
+  languageCodesForBands,
+  type LanguageDifficultyBand,
+} from '@/lib/languages';
 import { pickPhraseForWordRange } from '@/lib/phrases';
 import { roundStageForGame, type RoundStage, TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import type { Phrase, Player, RoomSettings, TurnResult } from '@/lib/types';
@@ -283,10 +287,20 @@ export const useGameStore = create<
     if (playerOrder.length === 0) return;
     const appGame = settings.appGame;
     const stage = roundStageForGame(appGame, settings.gameMode, currentRound);
-    let codes = languageCodesForBands(stage.languageBands);
-    if (codes.length === 0) codes = defaultLanguagePool();
     const order = currentRound === 1 ? playerOrder : shuffle(playerOrder);
     const history = languageHistoryFromResults(results);
+    let codes: string[];
+    if (appGame === 'reverse_audio') {
+      codes = ['en'];
+    } else if (settings.gameMode === 'mayhem') {
+      const mayhemBands: LanguageDifficultyBand[] = ['easy', 'moderate', 'hard'];
+      const band = mayhemBands[Math.floor(Math.random() * mayhemBands.length)]!;
+      codes = languageCodesForBands([band]);
+      if (codes.length === 0) codes = defaultLanguagePool();
+    } else {
+      codes = languageCodesForBands(stage.languageBands);
+      if (codes.length === 0) codes = defaultLanguagePool();
+    }
     let roundLanguages: string[];
     let roundPhrases: Phrase[];
     if (appGame === 'reverse_audio') {

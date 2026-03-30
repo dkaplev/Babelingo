@@ -1,3 +1,4 @@
+import { usePartyPalette } from '@/components/GameThemeProvider';
 import { BackLink } from '@/components/BackLink';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
@@ -7,18 +8,20 @@ import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { roundStageForGame, TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import { funniestResultInRound } from '@/lib/sessionHighlights';
-import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 export default function RoundIntroScreen() {
+  const party = usePartyPalette();
   const router = useRouter();
   const currentRound = useGameStore((s) => s.currentRound);
   const gameMode = useGameStore((s) => s.settings.gameMode);
   const appGame = useGameStore((s) => s.settings.appGame);
+  const players = useGameStore((s) => s.players);
   const results = useGameStore((s) => s.results);
   const beginRound = useGameStore((s) => s.beginRound);
+  const reverseSolo = appGame === 'reverse_audio' && players.length === 1;
 
   const stage = roundStageForGame(appGame, gameMode, currentRound);
   const modeLabel = gameMode === 'mayhem' ? 'Mayhem' : 'Regular';
@@ -30,18 +33,11 @@ export default function RoundIntroScreen() {
     return funniestResultInRound(results, currentRound - 1);
   }, [results, currentRound]);
 
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, [currentRound]);
-
   const onStart = () => {
     beginRound();
     trackEvent('round_intro_start', { round: currentRound, mode: gameMode });
     router.replace('/turn');
   };
-
-  const progress = currentRound / TOTAL_GAME_ROUNDS;
 
   return (
     <Screen
@@ -50,27 +46,22 @@ export default function RoundIntroScreen() {
       footer={<PrimaryButton title="Start this round" onPress={onStart} />}>
       {currentRound === 1 ? <BackLink fallbackHref="/lobby" label="← Lobby" /> : null}
 
-      <View style={styles.progressWrap}>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${Math.min(100, progress * 100)}%` }]} />
-        </View>
-        <View style={styles.chipsRow}>
-          {Array.from({ length: TOTAL_GAME_ROUNDS }, (_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.chip,
-                i < currentRound - 1 && styles.chipDone,
-                i === currentRound - 1 && styles.chipCurrent,
-              ]}
-            />
-          ))}
-        </View>
+      <View style={styles.progressRow} accessibilityLabel={`Round ${currentRound} of ${TOTAL_GAME_ROUNDS}`}>
+        {Array.from({ length: TOTAL_GAME_ROUNDS }, (_, i) => (
+          <View
+            key={i}
+            style={[
+              styles.progressSeg,
+              { backgroundColor: Colors.party.borderSubtle },
+              (i < currentRound - 1 || i === currentRound - 1) && { backgroundColor: Colors.party.accentPop },
+            ]}
+          />
+        ))}
       </View>
 
-      <Text style={styles.tierBadge}>{stage.tierBadge}</Text>
+      <Text style={[styles.tierBadge, { color: party.accentPop }]}>{stage.tierBadge}</Text>
 
-      <View style={styles.hype}>
+      <View style={[styles.hype, { borderColor: party.neonStroke }]}>
         <Text style={styles.tagline}>{stage.tagline}</Text>
       </View>
 
@@ -86,33 +77,46 @@ export default function RoundIntroScreen() {
 
       {currentRound === 1 ? (
         <View style={styles.rules}>
-          <Text style={styles.rulesTitle}>Quick rules</Text>
-          {appGame === 'reverse_audio' ? (
+          <Text style={[styles.rulesTitle, { color: party.accent2 }]}>Quick rules</Text>
+          {reverseSolo ? (
             <>
               <Text style={styles.rule}>
-                ① Pass the phone — active player hears the line backward, mimics it, hears their clip backward, then
-                records the real phrase.
+                ① Each round is a fresh English line — you never see the text until the scoreboard (same as party mode).
+              </Text>
+              <Text style={styles.rule}>
+                ② Chase a better score each round: backward mimic → hear your clip reversed → say the real phrase into
+                the mic.
+              </Text>
+              <Text style={styles.rule}>
+                ③ Treat it like arcade practice: beat your last closeness score, or run the same session with friends
+                later.
+              </Text>
+            </>
+          ) : appGame === 'reverse_audio' ? (
+            <>
+              <Text style={styles.rule}>
+                ① Pass the phone — active player gets a slowed-down backward clue, mimics it, hears their clip backward,
+                then records the real phrase.
               </Text>
               <Text style={styles.rule}>② Pipeline URL + Google key on the server required for reversed playback.</Text>
-              <Text style={styles.rule}>③ Solo is fine: one player runs the whole chain each round.</Text>
+              <Text style={styles.rule}>③ The answer phrase is revealed for everyone only after the round ends.</Text>
             </>
           ) : appGame === 'babel_phone' ? (
             <>
               <Text style={styles.rule}>
-                ① Host reads the English line to the room; the player only hears a foreign translation of the current
-                English link.
+                ① Only the active player hears the foreign line; nobody reads the English aloud until the round ends.
               </Text>
               <Text style={styles.rule}>
-                ② Each turn, the next English line is whatever came back from the last recording — classic telephone,
-                but through languages.
+                ② Each turn the next English line is whatever came back from the last recording — telephone through
+                languages.
               </Text>
               <Text style={styles.rule}>③ After the round, the scoreboard shows the full English mutation chain.</Text>
             </>
           ) : (
             <>
-              <Text style={styles.rule}>① Pass the phone to whoever is up — they only hear the foreign line.</Text>
-              <Text style={styles.rule}>② Play the phrase, mimic it out loud, record, submit — then the reveal.</Text>
-              <Text style={styles.rule}>③ Louder and messier usually beats quiet and perfect.</Text>
+              <Text style={styles.rule}>① Pass the phone — only the player hears the foreign audio clue.</Text>
+              <Text style={styles.rule}>② Play, mimic, record, submit — then the personal reveal.</Text>
+              <Text style={styles.rule}>③ The shared English line is revealed for the room after the whole round.</Text>
             </>
           )}
         </View>
@@ -122,42 +126,19 @@ export default function RoundIntroScreen() {
 }
 
 const styles = StyleSheet.create({
-  progressWrap: { marginBottom: 12 },
-  progressTrack: {
-    height: 8,
-    borderRadius: 8,
-    backgroundColor: Colors.party.surface2,
-    borderWidth: 2,
-    borderColor: Colors.party.borderSubtle,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 6,
-    backgroundColor: Colors.party.accent,
-  },
-  chipsRow: {
+  progressRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
     gap: 6,
+    marginBottom: 14,
   },
-  chip: {
+  progressSeg: {
     flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.party.borderSubtle,
-  },
-  chipDone: {
-    backgroundColor: Colors.party.accent2,
-  },
-  chipCurrent: {
-    backgroundColor: Colors.party.accentPop,
+    height: 10,
+    borderRadius: 4,
   },
   tierBadge: {
     fontFamily: Font.bodyBold,
     fontSize: 13,
-    color: Colors.party.accentPop,
     letterSpacing: 0.5,
     marginBottom: 10,
     textTransform: 'uppercase',
