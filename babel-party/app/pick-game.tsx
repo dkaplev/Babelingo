@@ -18,7 +18,7 @@ const GAMES: { id: AppGameId; title: string; body: string }[] = [
   {
     id: 'babel_phone',
     title: 'Babel Phone',
-    body: 'Each turn a new language; English mutates down the chain. Solo = one hop per round; group = full telephone.',
+    body: 'Each turn you hear a real foreign language; English mutates only on the chain between turns. Solo = one hop; group = full telephone.',
   },
   {
     id: 'reverse_audio',

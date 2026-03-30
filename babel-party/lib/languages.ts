@@ -56,7 +56,7 @@ export function defaultLanguagePool(): string[] {
   return LANGUAGES.map((l) => l.code);
 }
 
-/** Echo Translator: English is never the “foreign” clue language. */
+/** Echo & Babel Phone: English is never the heard “foreign” clue — it stays the chain / translation pivot only. */
 export function excludeEnglishFromPool(codes: string[]): string[] {
   const filtered = codes.filter((c) => c !== 'en');
   if (filtered.length > 0) return filtered;

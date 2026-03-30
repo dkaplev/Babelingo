@@ -114,21 +114,10 @@ export default function CreateRoomScreen() {
   return (
     <Screen
       title="Create room"
-      subtitle={`${gameLabel(settings.appGame)} · solo or group.`}>
+      subtitle={`${gameLabel(settings.appGame)} · group or solo.`}>
       <BackLink fallbackHref="/game-mode" />
 
-      <View style={styles.soloCard}>
-        <Text style={styles.soloTitle}>{soloCopy.title}</Text>
-        <Text style={styles.soloBody}>{soloCopy.body}</Text>
-      </View>
-      <PrimaryButton title="Solo mode — go to lobby" onPress={onSoloMode} />
-
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or play with a group</Text>
-        <View style={styles.dividerLine} />
-      </View>
-
+      <Text style={styles.sectionLead}>Multiplayer</Text>
       <Stepper label="Players" value={groupPlayerCount} min={2} max={16} onChange={setGroupPlayerCount} />
 
       <Text style={styles.section}>Teams</Text>
@@ -141,14 +130,33 @@ export default function CreateRoomScreen() {
           : 'Everyone competes solo; high score wins.'}
       </Text>
 
-      <PrimaryButton title="Continue to lobby (group)" onPress={onPartyContinue} variant="dim" style={{ marginTop: 20 }} />
+      <PrimaryButton title="Continue to lobby" onPress={onPartyContinue} style={{ marginTop: 20 }} />
+
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or play solo</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      <View style={styles.soloCard}>
+        <Text style={styles.soloTitle}>{soloCopy.title}</Text>
+        <Text style={styles.soloBody}>{soloCopy.body}</Text>
+      </View>
+      <PrimaryButton title="Solo mode — go to lobby" onPress={onSoloMode} variant="dim" />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  soloCard: {
+  sectionLead: {
     marginTop: 8,
+    marginBottom: 12,
+    fontFamily: Font.bodyBold,
+    color: Colors.party.text,
+    fontSize: 15,
+    letterSpacing: 0.3,
+  },
+  soloCard: {
     marginBottom: 14,
     padding: 16,
     borderRadius: 16,

@@ -304,7 +304,7 @@ export const useGameStore = create<
       codes = languageCodesForBands(stage.languageBands);
       if (codes.length === 0) codes = defaultLanguagePool();
     }
-    if (appGame === 'echo_translator') {
+    if (appGame === 'echo_translator' || appGame === 'babel_phone') {
       codes = excludeEnglishFromPool(codes);
     }
     let roundLanguages: string[];

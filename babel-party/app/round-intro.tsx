@@ -94,8 +94,8 @@ export default function RoundIntroScreen() {
           ) : soloMode && appGame === 'babel_phone' ? (
             <>
               <Text style={styles.rule}>
-                ① One turn per round: you hear the foreign line, record once — the scoreboard shows how the English
-                shifted in one hop.
+                ① One turn per round: you hear a non-English clue, record once — the scoreboard shows how the English
+                chain shifted in one hop.
               </Text>
               <Text style={styles.rule}>② Seed phrase stays secret until the round ends — no reading it aloud early.</Text>
               <Text style={styles.rule}>
@@ -128,7 +128,8 @@ export default function RoundIntroScreen() {
           ) : appGame === 'babel_phone' ? (
             <>
               <Text style={styles.rule}>
-                ① Only the active player hears the foreign line; nobody reads the English aloud until the round ends.
+                ① Only the active player hears a non-English foreign line; English is the chain language only — nobody
+                reads it aloud until the round ends.
               </Text>
               <Text style={styles.rule}>
                 ② Each turn the next English line is whatever came back from the last recording — telephone through
