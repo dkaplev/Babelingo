@@ -52,7 +52,7 @@ function soloCardCopy(appGame: AppGameId): { title: string; body: string } {
   if (appGame === 'reverse_audio') {
     return {
       title: 'Solo · Reverse Audio',
-      body: 'You run the full chain each round: set backward clue speed with the slider, mimic, hear your clip reversed at normal speed, and say the real line. Chase a better closeness score each round or warm up before a group game.',
+      body: 'Each round is a new very short line (4–5 words). Set backward clue speed with the slider, mimic, hear your clip reversed at normal speed, and say the line. Chase a better score or warm up before a group game.',
     };
   }
   if (appGame === 'babel_phone') {

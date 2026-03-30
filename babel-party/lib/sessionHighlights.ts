@@ -4,13 +4,27 @@ export function resultsForRound(results: TurnResult[], roundNumber: number): Tur
   return results.filter((r) => r.roundNumber === roundNumber);
 }
 
-/** First English seed phrase for the round (same for every turn in Echo / Reverse; Babel chain step 0). */
+/** First English seed phrase for the round (Echo: shared line; Reverse: first player’s line only — prefer `reverseAnswerLinesForRound` for Reverse). */
 export function roundSeedPhrase(results: TurnResult[], roundNumber: number): string | null {
   const inRound = resultsForRound(results, roundNumber);
   if (inRound.length === 0) return null;
   const sorted = [...inRound].sort((a, b) => a.turnOrderInRound - b.turnOrderInRound);
   const text = sorted[0]?.phraseOriginal?.trim();
   return text || null;
+}
+
+/** Reverse Audio: each turn has its own target line — ordered by play order for scoreboard reveal. */
+export function reverseAnswerLinesForRound(
+  results: TurnResult[],
+  roundNumber: number,
+): { playerName: string; phrase: string }[] {
+  const inRound = resultsForRound(results, roundNumber).sort(
+    (a, b) => a.turnOrderInRound - b.turnOrderInRound,
+  );
+  return inRound.map((r) => ({
+    playerName: r.playerName,
+    phrase: r.phraseOriginal.trim(),
+  }));
 }
 
 /** Babel Phone: ordered English mutations for the round (seed → each player’s echo-back). */

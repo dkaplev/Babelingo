@@ -618,7 +618,7 @@ function ReverseTurnScreen() {
         subtitle={
           solo
             ? `${player.name}, solo run — the answer stays hidden until the scoreboard. Use the speed slider on the next screen for the backward clue.`
-            : `${player.name} is up. The real phrase is revealed at the end of the round — backward audio is on the next screen.`
+            : `${player.name} is up. Each player has a different short line this round — nothing is revealed until the scoreboard. Backward audio is on the next screen.`
         }
         footer={
           <PrimaryButton
@@ -631,8 +631,8 @@ function ReverseTurnScreen() {
         <View style={[styles.card, { borderColor: party.neonStroke }]}>
           <Text style={styles.whisper}>Secret until scoreboard</Text>
           <Text style={styles.en}>
-            Backward clue speed follows the slider on the next screen (default is slower than normal speech). After you
-            record your mimic, your clip plays reversed at normal speed before you say the real line.
+            Clues are only 4–5 words but brutal backward. Speed follows the slider on the next screen. After your mimic,
+            your clip plays reversed at normal speed before you say the real line.
           </Text>
         </View>
       </Screen>

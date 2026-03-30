@@ -4,7 +4,12 @@ import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
-import { babelEnglishChainForRound, roundSeedPhrase, topScorersInRound } from '@/lib/sessionHighlights';
+import {
+  babelEnglishChainForRound,
+  reverseAnswerLinesForRound,
+  roundSeedPhrase,
+  topScorersInRound,
+} from '@/lib/sessionHighlights';
 import { computeTeamTotals } from '@/lib/teamScores';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
@@ -26,7 +31,14 @@ export default function ScoreboardScreen() {
     [settings.appGame, results, currentRound],
   );
   const roundAnswerPhrase = useMemo(() => roundSeedPhrase(results, currentRound), [results, currentRound]);
-  const showRoundPhrase = Boolean(roundAnswerPhrase) && settings.appGame !== 'babel_phone';
+  const reverseLines = useMemo(
+    () =>
+      settings.appGame === 'reverse_audio'
+        ? reverseAnswerLinesForRound(results, currentRound)
+        : [],
+    [settings.appGame, results, currentRound],
+  );
+  const showEchoRoundPhrase = Boolean(roundAnswerPhrase) && settings.appGame === 'echo_translator';
 
   const onNext = () => {
     goScoreboardToNext();
@@ -47,7 +59,21 @@ export default function ScoreboardScreen() {
           onPress={onNext}
         />
       }>
-      {showRoundPhrase && roundAnswerPhrase ? (
+      {reverseLines.length > 0 ? (
+        <View style={styles.phraseBanner}>
+          <Text style={styles.phraseTitle}>Reverse Audio — answers (revealed)</Text>
+          <Text style={styles.phraseSub}>
+            Each player had a different short line (4–5 words) so no one was spoiled mid-round.
+          </Text>
+          {reverseLines.map((row, i) => (
+            <Text key={`${i}-${row.playerName}`} style={styles.phraseLine}>
+              {row.playerName}: “{row.phrase}”
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
+      {showEchoRoundPhrase && roundAnswerPhrase ? (
         <View style={styles.phraseBanner}>
           <Text style={styles.phraseTitle}>This round’s line (revealed)</Text>
           <Text style={styles.phraseLine}>“{roundAnswerPhrase}”</Text>
@@ -142,6 +168,13 @@ const styles = StyleSheet.create({
     color: Colors.party.accentPop,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+  },
+  phraseSub: {
+    fontFamily: Font.body,
+    fontSize: 14,
+    lineHeight: 21,
+    color: Colors.party.textMuted,
+    marginBottom: 4,
   },
   phraseLine: {
     fontFamily: Font.body,

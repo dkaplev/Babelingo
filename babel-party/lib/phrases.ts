@@ -189,6 +189,49 @@ export function pickPhraseForWordRange(
   return pickPhraseFromPool(pool);
 }
 
+function shufflePhrases<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j]!, a[i]!];
+  }
+  return a;
+}
+
+/**
+ * Pick `count` different phrases in the word range (by phrase id). If the pool is smaller than `count`,
+ * cycles through shuffled picks without immediate repeats.
+ */
+export function pickDistinctPhrasesForWordRange(
+  count: number,
+  category: PhraseCategory | 'mixed',
+  minWords: number,
+  maxWords: number,
+): Phrase[] {
+  let pool = category === 'mixed' ? PHRASES : PHRASES.filter((x) => x.category === category);
+  pool = pool.filter((p) => {
+    const n = phraseWordCount(p.text);
+    return n >= minWords && n <= maxWords;
+  });
+  if (pool.length === 0) {
+    return Array.from({ length: count }, () => pickPhraseForWordRange(category, minWords, maxWords));
+  }
+  const shuffled = shufflePhrases(pool);
+  const out: Phrase[] = [];
+  const usedThisPass = new Set<string>();
+  for (let i = 0; i < count; i++) {
+    let candidates = shuffled.filter((p) => !usedThisPass.has(p.id));
+    if (candidates.length === 0) {
+      usedThisPass.clear();
+      candidates = shuffled;
+    }
+    const pick = candidates[Math.floor(Math.random() * candidates.length)]!;
+    usedThisPass.add(pick.id);
+    out.push(pick);
+  }
+  return out;
+}
+
 export function pickPhrase(category: PhraseCategory | 'mixed'): Phrase {
   let pool = PHRASES;
   if (category !== 'mixed') {

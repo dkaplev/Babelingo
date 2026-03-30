@@ -23,7 +23,7 @@ const GAMES: { id: AppGameId; title: string; body: string }[] = [
   {
     id: 'reverse_audio',
     title: 'Reverse Audio',
-    body: 'Backward clue (speed slider) → mimic → your clip reversed at normal speed → say the line. English only.',
+    body: '4–5 word lines, unique per player each round. Backward clue (slider) → mimic → clip reversed → say it. English only.',
   },
 ];
 

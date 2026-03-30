@@ -81,7 +81,7 @@ export default function RoundIntroScreen() {
           {soloMode && appGame === 'reverse_audio' ? (
             <>
               <Text style={styles.rule}>
-                ① Fresh English line each round — text stays hidden until the scoreboard, same as party mode.
+                ① Very short English line (4–5 words) each round — text stays hidden until the scoreboard.
               </Text>
               <Text style={styles.rule}>
                 ② Use the listen-speed slider for the backward clue; after your mimic, your clip plays reversed at normal
@@ -119,11 +119,15 @@ export default function RoundIntroScreen() {
           ) : appGame === 'reverse_audio' ? (
             <>
               <Text style={styles.rule}>
-                ① Pass the phone — backward clue speed is set with the slider; they mimic, hear their clip reversed at
-                normal speed, then record the real phrase.
+                ① Every player gets a different short line (4–5 words) in the same round — so a reveal never spoils the
+                next turn.
               </Text>
-              <Text style={styles.rule}>② Pipeline URL + Google key on the server required for reversed playback.</Text>
-              <Text style={styles.rule}>③ The answer phrase is revealed for everyone only after the round ends.</Text>
+              <Text style={styles.rule}>
+                ② Pass the phone — backward clue speed is set with the slider; mimic, hear your clip reversed at normal
+                speed, then record the real phrase.
+              </Text>
+              <Text style={styles.rule}>③ Pipeline URL + Google key on the server required for reversed playback.</Text>
+              <Text style={styles.rule}>④ All answers show on the scoreboard after the round.</Text>
             </>
           ) : appGame === 'babel_phone' ? (
             <>

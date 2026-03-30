@@ -126,13 +126,13 @@ export function roundStageForGame(
   if (appGame === 'reverse_audio') {
     const tagline =
       mode === 'mayhem'
-        ? 'English only — backward audio, random phrase lengths each round.'
-        : 'English only — you hear the line backward, then untangle it forward.';
+        ? 'English only — very short lines (4–5 words), unique clue per player, backward audio.'
+        : 'English only — short backward clues (4–5 words); every player gets a fresh line in the round.';
     return {
       ...base,
       languageBands: ['easy'],
       phraseMinWords: 4,
-      phraseMaxWords: 6,
+      phraseMaxWords: 5,
       tagline,
     };
   }

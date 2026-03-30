@@ -5,7 +5,7 @@ import {
   type LanguageDifficultyBand,
 } from '@/lib/languages';
 import { PLAYBACK_SPEED_DEFAULT } from '@/lib/playbackSpeed';
-import { pickPhraseForWordRange } from '@/lib/phrases';
+import { pickDistinctPhrasesForWordRange, pickPhraseForWordRange } from '@/lib/phrases';
 import { roundStageForGame, type RoundStage, TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import type { Phrase, Player, RoomSettings, TurnResult } from '@/lib/types';
 import { create } from 'zustand';
@@ -310,9 +310,13 @@ export const useGameStore = create<
     let roundLanguages: string[];
     let roundPhrases: Phrase[];
     if (appGame === 'reverse_audio') {
-      const phrase = pickPhraseForWordRange('mixed', stage.phraseMinWords, stage.phraseMaxWords);
       roundLanguages = order.map(() => 'en');
-      roundPhrases = order.map(() => phrase);
+      roundPhrases = pickDistinctPhrasesForWordRange(
+        order.length,
+        'mixed',
+        stage.phraseMinWords,
+        stage.phraseMaxWords,
+      );
     } else {
       roundLanguages = assignLanguagesForRound(codes, order, history);
       if (appGame === 'babel_phone') {
