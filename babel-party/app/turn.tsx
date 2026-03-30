@@ -58,6 +58,8 @@ function EchoBabelTurnScreen() {
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const player = useGameStore((s) => currentPlayer(s));
+  const players = useGameStore((s) => s.players);
+  const solo = players.length === 1;
   const lang = currentLanguageCode ? languageByCode(currentLanguageCode) : undefined;
 
   const hasListenedOnce = listensRemaining < MAX_PHRASE_PLAYS;
@@ -290,21 +292,26 @@ function EchoBabelTurnScreen() {
   if (!passConfirmed) {
     return (
       <Screen
-        title="Pass the phone"
-        subtitle={`${player.name} is up. The real line stays secret until the round ends — they only get the audio clue on the next screen.`}
+        title={solo ? 'Your turn' : 'Pass the phone'}
+        subtitle={
+          solo
+            ? `${player.name}, you’re playing solo — the real line stays secret until the scoreboard. The next screen is audio only.`
+            : `${player.name} is up. The real line stays secret until the round ends — they only get the audio clue on the next screen.`
+        }
         footer={
           <PrimaryButton
-            title={`${player.name} has the phone — continue`}
+            title={solo ? 'Continue to audio clue' : `${player.name} has the phone — continue`}
             onPress={() => setPassConfirmed(true)}
-            accessibilityLabel={`Confirm ${player.name} is holding the phone`}
+            accessibilityLabel={solo ? 'Continue to audio clue' : `Confirm ${player.name} is holding the phone`}
           />
         }>
         {menuRow}
         <View style={[styles.card, { borderColor: party.neonStroke }]}>
           <Text style={styles.whisper}>No peeking</Text>
           <Text style={styles.en}>
-            Don’t read any English aloud yet. Everyone finds out the phrase at the scoreboard after all turns in this
-            round.
+            {solo
+              ? 'Keep the phrase to yourself until the scoreboard — treat it like a private practice run you can repeat with friends later.'
+              : 'Don’t read any English aloud yet. Everyone finds out the phrase at the scoreboard after all turns in this round.'}
           </Text>
         </View>
       </Screen>
@@ -434,6 +441,8 @@ function ReverseTurnScreen() {
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const player = useGameStore((s) => currentPlayer(s));
+  const players = useGameStore((s) => s.players);
+  const solo = players.length === 1;
 
   const hasListenedOnce = listensRemaining < MAX_PHRASE_PLAYS;
   const hasFinalRecording = Boolean(pendingRecordingUri);
@@ -502,8 +511,7 @@ function ReverseTurnScreen() {
     setPhrasePlaybackBusy(true);
     try {
       await stopPipelineTtsPlayback();
-      const speakingRate = listensRemaining === MAX_PHRASE_PLAYS ? 0.5 : 1;
-      const b64 = await fetchTtsReversedWavBase64(roundPhrase.text, { speakingRate });
+      const b64 = await fetchTtsReversedWavBase64(roundPhrase.text, { speakingRate: 0.5 });
       await playPipelineWavBase64(b64);
       nextListenConsumed();
     } catch (e) {
@@ -589,20 +597,25 @@ function ReverseTurnScreen() {
   if (!passConfirmed) {
     return (
       <Screen
-        title="Pass the phone"
-        subtitle={`${player.name} is up. The real phrase is revealed at the end of the round — backward audio is on the next screen.`}
+        title={solo ? 'Your turn' : 'Pass the phone'}
+        subtitle={
+          solo
+            ? `${player.name}, solo run — the answer stays hidden until the scoreboard. Half-speed backward audio is on the next screen.`
+            : `${player.name} is up. The real phrase is revealed at the end of the round — backward audio is on the next screen.`
+        }
         footer={
           <PrimaryButton
-            title={`${player.name} has the phone — continue`}
+            title={solo ? 'Continue to backward audio' : `${player.name} has the phone — continue`}
             onPress={() => setPassConfirmed(true)}
-            accessibilityLabel={`Confirm ${player.name} is holding the phone`}
+            accessibilityLabel={solo ? 'Continue to backward audio' : `Confirm ${player.name} is holding the phone`}
           />
         }>
         {menuRow}
         <View style={[styles.card, { borderColor: party.neonStroke }]}>
           <Text style={styles.whisper}>Secret until scoreboard</Text>
           <Text style={styles.en}>
-            The first backward listen is half-speed; any replays play at normal speed so you can double-check details.
+            All backward clue listens are half-speed. After you record your mimic, your clip plays reversed at normal
+            speed before you say the real line.
           </Text>
         </View>
       </Screen>
@@ -672,13 +685,13 @@ function ReverseTurnScreen() {
             ? listensRemaining <= 0
               ? 'Record your backward mimic when ready.'
               : hasListenedOnce
-                ? `Replay backward clue (${listensRemaining} at normal speed) or record your mimic.`
-                : 'First backward play is half-speed — replays are full speed — then record your mimic.'
+                ? `Replay backward clue (${listensRemaining} left, all at half-speed) or record your mimic.`
+                : 'Every backward listen is half-speed — then record your mimic.'
             : listensRemaining <= 0
               ? 'Record the real phrase when ready.'
               : hasListenedOnce
-                ? `Replay your clip reversed (${listensRemaining} left) or record the answer.`
-                : 'Listen to your attempt reversed, then record the real phrase.'}
+                ? `Replay your clip reversed at normal speed (${listensRemaining} left) or record the answer.`
+                : 'Hear your attempt reversed at normal speed, then record the real phrase.'}
         </Text>
       </View>
 

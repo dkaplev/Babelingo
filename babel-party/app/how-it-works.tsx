@@ -28,7 +28,8 @@ export default function HowItWorksScreen() {
         ))}
       </View>
       <Text style={styles.note}>
-        Tip: when the room is stuck on a rule, read the quick rules on round 1 together — then play first and argue later.
+        Tip: playing alone? Set players to 1 in create-room — every mode has a solo flow with round-1 tips. In a group,
+        read the quick rules together if anyone is unsure.
       </Text>
     </Screen>
   );

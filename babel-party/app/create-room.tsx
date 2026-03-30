@@ -7,6 +7,7 @@ import { trackEvent } from '@/lib/analytics';
 import { defaultLanguagePool } from '@/lib/languages';
 import { useGameStore } from '@/lib/gameStore';
 import { TOTAL_GAME_ROUNDS } from '@/lib/progression';
+import type { AppGameId } from '@/lib/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -47,17 +48,37 @@ function gameLabel(appGame: string): string {
   return 'Echo Translator';
 }
 
+function soloCardCopy(appGame: AppGameId): { title: string; body: string } {
+  if (appGame === 'reverse_audio') {
+    return {
+      title: 'Solo · Reverse Audio',
+      body: 'You run the full chain each round: every backward clue listen is half-speed, then you mimic, hear your clip reversed at normal speed, and say the real line. Chase a better closeness score each round or warm up before a group game.',
+    };
+  }
+  if (appGame === 'babel_phone') {
+    return {
+      title: 'Solo · Babel Phone',
+      body: 'You are the whole telephone in one turn: hear the foreign line, record once, and see how the English mutates on the scoreboard. Try to stay close to the seed — or lean into chaos for practice.',
+    };
+  }
+  return {
+    title: 'Solo · Echo Translator',
+    body: 'One turn per round: foreign audio in, your mimic scored, phrase revealed at the scoreboard. Great with headphones to rehearse before hosting a party.',
+  };
+}
+
 export default function CreateRoomScreen() {
   const router = useRouter();
   const settings = useGameStore((s) => s.settings);
   const updateSettings = useGameStore((s) => s.updateSettings);
 
-  const minPlayers = settings.appGame === 'reverse_audio' ? 1 : 2;
+  const minPlayers = 1;
   const [playerCount, setPlayerCount] = useState(() =>
     Math.max(minPlayers, settings.playerCount),
   );
   const [teams, setTeams] = useState(settings.teamsEnabled);
-  const reverseSolo = settings.appGame === 'reverse_audio' && playerCount === 1;
+  const soloMode = playerCount === 1;
+  const soloCopy = soloCardCopy(settings.appGame);
 
   useEffect(() => {
     setPlayerCount((c) => Math.max(minPlayers, c));
@@ -65,19 +86,19 @@ export default function CreateRoomScreen() {
 
   const onContinue = () => {
     const count = Math.max(minPlayers, playerCount);
-    const soloReverse = settings.appGame === 'reverse_audio' && count === 1;
+    const solo = count === 1;
     updateSettings({
       playerCount: count,
       rounds: TOTAL_GAME_ROUNDS,
-      teamsEnabled: soloReverse ? false : teams,
+      teamsEnabled: solo ? false : teams,
       difficulty: 'chaos',
       category: 'mixed',
       languageCodes: defaultLanguagePool(),
     });
     trackEvent('room_created', {
-      playerCount,
+      playerCount: count,
       rounds: TOTAL_GAME_ROUNDS,
-      teams,
+      teams: solo ? false : teams,
     });
     router.push('/lobby');
   };
@@ -85,21 +106,18 @@ export default function CreateRoomScreen() {
   return (
     <Screen
       title="Create room"
-      subtitle={`${gameLabel(settings.appGame)} · how many pass the phone (rounds follow the mode you picked).`}>
+      subtitle={`${gameLabel(settings.appGame)} · ${soloMode ? 'Solo practice or ' : ''}how many pass the phone.`}>
       <BackLink fallbackHref="/game-mode" />
       <Stepper label="Players" value={playerCount} min={minPlayers} max={16} onChange={setPlayerCount} />
 
-      {reverseSolo ? (
+      {soloMode ? (
         <View style={styles.soloCard}>
-          <Text style={styles.soloTitle}>Reverse Audio · solo practice</Text>
-          <Text style={styles.soloBody}>
-            One player runs every “turn” on the same phone: backward clue → mimic → your clip reversed → say the real
-            line. Compare your closeness scores round to round, or use it as a warm-up before a group game.
-          </Text>
+          <Text style={styles.soloTitle}>{soloCopy.title}</Text>
+          <Text style={styles.soloBody}>{soloCopy.body}</Text>
         </View>
       ) : null}
 
-      {!reverseSolo ? (
+      {!soloMode ? (
         <>
           <Text style={styles.section}>Teams</Text>
           <Pressable style={[styles.toggle, teams && styles.toggleOn]} onPress={() => setTeams(!teams)}>
@@ -112,7 +130,9 @@ export default function CreateRoomScreen() {
           </Text>
         </>
       ) : (
-        <Text style={styles.teamHint}>Teams are off in solo Reverse Audio — it’s just you vs. the backward audio.</Text>
+        <Text style={styles.teamHint}>
+          Teams are off with one player — add more people in this step if you want team scoring later.
+        </Text>
       )}
 
       <PrimaryButton title="Continue to lobby" onPress={onContinue} style={{ marginTop: 24 }} />

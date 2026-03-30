@@ -13,17 +13,17 @@ const GAMES: { id: AppGameId; title: string; body: string }[] = [
   {
     id: 'echo_translator',
     title: 'Echo Translator',
-    body: 'Foreign audio clue → you mimic → scored. Same English line for the round, revealed at the end.',
+    body: 'Foreign audio → mimic → scored. Same line for the round, revealed at the end. Solo (one turn/round) or party.',
   },
   {
     id: 'babel_phone',
     title: 'Babel Phone',
-    body: 'Each turn hears a new language; English mutates down the chain. Full chain shows on the scoreboard.',
+    body: 'Each turn a new language; English mutates down the chain. Solo = one hop per round; group = full telephone.',
   },
   {
     id: 'reverse_audio',
     title: 'Reverse Audio',
-    body: 'Backward clue → mimic → forward phrase. English only; solo or pass-the-phone.',
+    body: 'Half-speed backward clue (every listen) → mimic → your clip reversed at normal speed → say the line. English only.',
   },
 ];
 

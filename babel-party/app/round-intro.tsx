@@ -21,7 +21,7 @@ export default function RoundIntroScreen() {
   const players = useGameStore((s) => s.players);
   const results = useGameStore((s) => s.results);
   const beginRound = useGameStore((s) => s.beginRound);
-  const reverseSolo = appGame === 'reverse_audio' && players.length === 1;
+  const soloMode = players.length === 1;
 
   const stage = roundStageForGame(appGame, gameMode, currentRound);
   const modeLabel = gameMode === 'mayhem' ? 'Mayhem' : 'Regular';
@@ -78,25 +78,44 @@ export default function RoundIntroScreen() {
       {currentRound === 1 ? (
         <View style={styles.rules}>
           <Text style={[styles.rulesTitle, { color: party.accent2 }]}>Quick rules</Text>
-          {reverseSolo ? (
+          {soloMode && appGame === 'reverse_audio' ? (
             <>
               <Text style={styles.rule}>
-                ① Each round is a fresh English line — you never see the text until the scoreboard (same as party mode).
+                ① Fresh English line each round — text stays hidden until the scoreboard, same as party mode.
               </Text>
               <Text style={styles.rule}>
-                ② Chase a better score each round: backward mimic → hear your clip reversed → say the real phrase into
-                the mic.
+                ② Every backward clue listen is half-speed; after your mimic, your clip plays reversed at normal speed;
+                then record the real phrase.
               </Text>
               <Text style={styles.rule}>
-                ③ Treat it like arcade practice: beat your last closeness score, or run the same session with friends
-                later.
+                ③ Arcade practice: beat your last closeness score, or switch to multi-player when friends arrive.
               </Text>
+            </>
+          ) : soloMode && appGame === 'babel_phone' ? (
+            <>
+              <Text style={styles.rule}>
+                ① One turn per round: you hear the foreign line, record once — the scoreboard shows how the English
+                shifted in one hop.
+              </Text>
+              <Text style={styles.rule}>② Seed phrase stays secret until the round ends — no reading it aloud early.</Text>
+              <Text style={styles.rule}>
+                ③ Try for a tight translation or lean into silly sounds; either way you get a chain to laugh at.
+              </Text>
+            </>
+          ) : soloMode ? (
+            <>
+              <Text style={styles.rule}>
+                ① One turn per round: foreign audio only, then your recording — the answer phrase unlocks at the
+                scoreboard.
+              </Text>
+              <Text style={styles.rule}>② Chase higher closeness scores across rounds or use it as quiet rehearsal.</Text>
+              <Text style={styles.rule}>③ Add players in create-room when you want pass-the-phone chaos.</Text>
             </>
           ) : appGame === 'reverse_audio' ? (
             <>
               <Text style={styles.rule}>
-                ① Pass the phone — active player gets a slowed-down backward clue, mimics it, hears their clip backward,
-                then records the real phrase.
+                ① Pass the phone — every backward clue listen is half-speed; they mimic, then hear their clip reversed at
+                normal speed, then record the real phrase.
               </Text>
               <Text style={styles.rule}>② Pipeline URL + Google key on the server required for reversed playback.</Text>
               <Text style={styles.rule}>③ The answer phrase is revealed for everyone only after the round ends.</Text>
