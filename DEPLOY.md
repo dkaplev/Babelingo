@@ -1,5 +1,7 @@
 # Babel Party — hosting guide
 
+**What the game is:** see the repo **[README.md](./README.md)** (modes, solo/party, pipeline, features).
+
 Two parts ship separately: **the API** (Node server) and **the mobile app** (Expo). Players never need your laptop once both are deployed.
 
 ## 1. API (`babel-party-server`)
