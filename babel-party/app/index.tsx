@@ -9,10 +9,8 @@ import { useRouter, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-/** Processed logo asset is 904×502 — keeps layout centered with resizeMode contain */
-const LOGO_ASPECT = 904 / 502;
-/** Fine-tune if the PNG’s padding makes BABELINGO look off-center (try ±4–20). */
-const LOGO_OPTICAL_SHIFT_X = -20;
+/** Title art is 1024×558 — layout uses resizeMode contain */
+const LOGO_ASPECT = 1024 / 558;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -47,17 +45,16 @@ export default function HomeScreen() {
           },
         ]}>
         <Image
-          source={require('@/assets/images/babelingo-logo.png')}
+          source={require('@/assets/images/babelingo-title.png')}
           style={[
             styles.logo,
             {
               width: logoWidth,
               height: logoHeight,
-              transform: [{ translateX: LOGO_OPTICAL_SHIFT_X }],
             },
           ]}
           resizeMode="contain"
-          accessibilityLabel="Babelingo logo"
+          accessibilityLabel="Babelingo title"
         />
       </View>
       <Text style={styles.homeLead}>
