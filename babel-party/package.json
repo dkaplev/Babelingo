@@ -12,6 +12,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "submit:ios-testflight": "node ./scripts/eas-submit-ios-testflight.mjs",
+    "build:ios:local": "npx eas-cli@latest build --platform ios --profile production --local",
+    "prebuild:ios": "expo prebuild --platform ios --clean",
     "version:patch": "node ./scripts/bump-app-version.mjs patch",
     "version:minor": "node ./scripts/bump-app-version.mjs minor"
   },

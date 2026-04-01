@@ -60,7 +60,7 @@ The server holds **Google Cloud credentials** and exposes `/translate`, `/tts`, 
 
 ## 2. Mobile app (`babel-party`)
 
-The game is a **native mobile app** (mic, TTS, recording). You don’t “host” it like a PHP site on a VPS — you **build installable binaries in the cloud** with **EAS Build**, then people install from a link, TestFlight, or the stores. Your **laptop is only needed to start a build**, not to run the game at the party.
+The game is a **native mobile app** (mic, TTS, recording). You don’t “host” it like a PHP site on a VPS — you **build installable binaries** with **EAS Build** (cloud or **local on your Mac**), then people install from a link, TestFlight, or the stores. For cloud builds, your laptop is only needed to start the build; **local builds** avoid long free-tier EAS queues.
 
 ### One-time setup (from any machine)
 
@@ -107,6 +107,74 @@ Typical flow:
 1. **EAS Build** produces `.ipa` / `.aab` in the cloud.
 2. **Internal / TestFlight / Play internal testing** for friends.
 3. **App Store / Play Store** when you’re ready.
+
+### TestFlight without EAS cloud queues (local builds)
+
+Free-tier **cloud** EAS builds can sit in a long queue. Use one of these instead.
+
+#### Option A — EAS **local** iOS build (recommended)
+
+Same **`production`** profile and signing credentials as cloud builds, but the compile runs **on your Mac** — **no queue**.
+
+**One-time on the Mac:**
+
+- Install **Xcode** (App Store) and open it once to accept the license.
+- Install **CocoaPods** (`brew install cocoapods` or the [CocoaPods install guide](https://cocoapods.org/)).
+- Install **Fastlane** (required by EAS for local iOS builds): `brew install fastlane`.
+- `npx eas-cli@latest login` from `babel-party` if you have not already.
+
+**Each TestFlight build:**
+
+1. Set **`EXPO_PUBLIC_PIPELINE_URL`** for `production` in the [EAS env vars](https://expo.dev) UI, **or** prefix the command (same as cloud builds).
+2. From `babel-party`:
+
+   ```bash
+   npm run build:ios:local
+   ```
+
+   Equivalent:
+
+   ```bash
+   EXPO_PUBLIC_PIPELINE_URL=https://YOUR_API_HOST npx eas-cli@latest build --platform ios --profile production --local
+   ```
+
+3. When the build finishes, you get an **`.ipa`** on disk. Upload to App Store Connect:
+   - **Transporter** (Mac App Store), or
+   - `npx eas-cli@latest submit -p ios --profile production --path path/to/your.ipa` (if you pass `--path`, submit does not require a prior cloud build).
+
+After a **local** EAS build, submit the `.ipa` without re-uploading from Expo’s servers:
+
+```bash
+EAS_SUBMIT_IPA_PATH="$HOME/Downloads/your-build.ipa" npm run submit:ios-testflight
+```
+
+Or use **Transporter** or **Xcode Organizer** to upload the `.ipa`.
+
+See Expo’s [local builds](https://docs.expo.dev/build-reference/local-builds/) for troubleshooting.
+
+#### Option B — **Prebuild + Xcode** (no `eas build` at all)
+
+Use this if you prefer full control in Xcode or want zero dependency on EAS for the compile step. **`ios/` is gitignored** in this repo; you regenerate it when native deps change.
+
+1. From `babel-party`, set API URL for the JS bundle (same as other builds):
+
+   ```bash
+   export EXPO_PUBLIC_PIPELINE_URL=https://YOUR_API_HOST
+   ```
+
+2. Generate native project and install pods:
+
+   ```bash
+   npm run prebuild:ios
+   cd ios && pod install && cd ..
+   ```
+
+3. Open the **`.xcworkspace`** inside **`ios/`** in Xcode (folder name follows `expo.slug` / `expo.name` in `app.json`).
+4. Select a **real device** or **Any iOS Device (arm64)**, not a simulator.
+5. **Signing & Capabilities:** your **Team** (`UDP2RKPHCF` / Babelingo bundle id `party.babelingo.app`).
+6. **Product → Archive** → **Distribute App** → **App Store Connect** → upload.
+
+After processing in App Store Connect, enable **TestFlight** as usual.
 
 ### Point the app at the hosted API
 
