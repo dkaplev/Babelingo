@@ -36,7 +36,9 @@ export default function HomeScreen() {
   };
 
   return (
-    <Screen>
+    <Screen
+      backdropColor={Colors.party.logoBackdrop}
+      overlayColor={Colors.party.logoBackdropOverlay}>
       <View
         style={[
           styles.logoWrap,
@@ -80,14 +82,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.party.surface,
+    backgroundColor: Colors.party.logoBackdrop,
     borderRadius: 12,
     overflow: 'visible',
     direction: 'ltr',
   },
   logo: {
     alignSelf: 'center',
-    backgroundColor: Colors.party.surface,
+    backgroundColor: Colors.party.logoBackdrop,
   },
   homeLead: {
     fontFamily: Font.body,

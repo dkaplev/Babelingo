@@ -1,6 +1,11 @@
 import Colors from '@/constants/Colors';
 import { StyleSheet, View } from 'react-native';
 
+type Props = {
+  /** Defaults to party surface; use `Colors.party.logoBackdrop` on the home screen. */
+  baseColor?: string;
+};
+
 /** Fixed “stars” (deterministic, cheap) — sits under the dim overlay in Screen. */
 const STARS: { l: `${number}%`; t: `${number}%` }[] = [
   { l: '8%', t: '10%' },
@@ -21,9 +26,9 @@ const STARS: { l: `${number}%`; t: `${number}%` }[] = [
   { l: '38%', t: '88%' },
 ];
 
-export function NesBackground() {
+export function NesBackground({ baseColor }: Props) {
   return (
-    <View style={styles.wrap} pointerEvents="none">
+    <View style={[styles.wrap, { backgroundColor: baseColor ?? Colors.party.surface }]} pointerEvents="none">
       {STARS.map((p, i) => (
         <View key={i} style={[styles.star, { left: p.l, top: p.t }]} />
       ))}
@@ -41,7 +46,6 @@ export function NesBackground() {
 const styles = StyleSheet.create({
   wrap: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.party.surface,
   },
   star: {
     position: 'absolute',

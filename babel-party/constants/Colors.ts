@@ -1,5 +1,7 @@
 /** Neon Retro — party game night (magenta / cyan / orange on dark navy). */
 const navy = '#1A1B4B';
+/** Title art (`babelingo-title.png`) solid backdrop — slightly deeper than `navy`. */
+const logoBackdrop = '#141544';
 const navyMid = '#24285F';
 const navyCard = '#2A2E72';
 const magenta = '#D527B7';
@@ -16,6 +18,10 @@ export default {
     accentPop: orange,
     /** ~60% — base */
     surface: navy,
+    /** Home / logo strip — matches PNG background */
+    logoBackdrop,
+    /** Dim layer over NesBackground when using logoBackdrop (rgb of #141544 @ 88%). */
+    logoBackdropOverlay: 'rgba(20, 21, 68, 0.88)',
     surface2: navyMid,
     card: navyCard,
     text: '#F4F6FF',

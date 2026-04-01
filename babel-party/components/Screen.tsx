@@ -12,6 +12,10 @@ export function Screen(props: {
   children: ReactNode;
   footer?: ReactNode;
   keyboardAvoiding?: boolean;
+  /** e.g. `Colors.party.logoBackdrop` so the home screen matches `babelingo-title.png`. */
+  backdropColor?: string;
+  /** Scrim over `NesBackground`; default matches `party.surface`. */
+  overlayColor?: string;
 }) {
   const {
     title,
@@ -20,8 +24,12 @@ export function Screen(props: {
     children,
     footer,
     keyboardAvoiding = false,
+    backdropColor,
+    overlayColor,
   } = props;
   const party = usePartyPalette();
+  const rootBg = backdropColor ?? party.surface;
+  const scrim = overlayColor ?? 'rgba(26, 27, 75, 0.88)';
   const scroll = (
     <ScrollView
       contentContainerStyle={styles.scroll}
@@ -47,9 +55,9 @@ export function Screen(props: {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: party.surface }]}>
-      <NesBackground />
-      <View style={styles.bgOverlay} pointerEvents="none" />
+    <View style={[styles.root, { backgroundColor: rootBg }]}>
+      <NesBackground baseColor={rootBg} />
+      <View style={[styles.bgOverlay, { backgroundColor: scrim }]} pointerEvents="none" />
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         {keyboardAvoiding ? (
           <KeyboardAvoidingView
@@ -62,7 +70,7 @@ export function Screen(props: {
           scroll
         )}
         {footer ? (
-          <View style={[styles.footer, { borderTopColor: party.neonStroke, backgroundColor: party.surface }]}>
+          <View style={[styles.footer, { borderTopColor: party.neonStroke, backgroundColor: rootBg }]}>
             {footer}
           </View>
         ) : null}
@@ -76,7 +84,6 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   bgOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(26, 27, 75, 0.88)',
   },
   safe: { flex: 1, backgroundColor: 'transparent' },
   scroll: {

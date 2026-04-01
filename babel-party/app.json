@@ -2,7 +2,7 @@
   "expo": {
     "name": "Babelingo",
     "slug": "babelingo",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "babelingo",
@@ -10,11 +10,11 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1A1B4B"
+      "backgroundColor": "#141544"
     },
     "ios": {
       "bundleIdentifier": "party.babelingo.app",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "appleTeamId": "UDP2RKPHCF",
       "supportsTablet": true,
       "infoPlist": {
@@ -24,12 +24,12 @@
     },
     "android": {
       "package": "party.babelingo.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#1A1B4B",
+        "backgroundColor": "#141544",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
