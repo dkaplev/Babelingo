@@ -324,6 +324,86 @@ function mockRecognized(translatedForeign, languageCode, audioBuffer) {
   return words.slice(0, take).join(' ');
 }
 
+function tokenizeForChaos(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function cosineSimilarityVec(a, b) {
+  if (!a?.length || !b?.length || a.length !== b.length) return 0;
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  const den = Math.sqrt(na) * Math.sqrt(nb);
+  return den > 0 ? dot / den : 0;
+}
+
+/** Fallback when Gemini embeddings are unavailable (wrong key scope or network). */
+function jaccardChaosBase(originalEnglish, reverseEnglish) {
+  const t1 = tokenizeForChaos(originalEnglish);
+  const t2 = tokenizeForChaos(reverseEnglish);
+  const set1 = new Set(t1);
+  const set2 = new Set(t2);
+  let inter = 0;
+  for (const w of set1) if (set2.has(w)) inter += 1;
+  const union = new Set([...set1, ...set2]).size || 1;
+  const jaccard = inter / union;
+  return Math.round((1 - jaccard) * 100);
+}
+
+async function googleGeminiEmbeddingVector(text) {
+  if (!GOOGLE_KEY || !String(text ?? '').trim()) return null;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GOOGLE_KEY}`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'models/text-embedding-004',
+        content: { parts: [{ text: String(text).slice(0, 8000) }] },
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const vals = data.embedding?.values;
+    if (!Array.isArray(vals)) return null;
+    return vals;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Chaos 0–99: semantic distance between original English and back-translated English.
+ * +10 if word counts differ by more than 50%. Cap at 99 (100 reserved for easter egg).
+ */
+async function computeChaosScore(originalEnglish, reverseEnglish) {
+  const o = String(originalEnglish ?? '').trim();
+  const r = String(reverseEnglish ?? '').trim();
+  if (!o && !r) return 0;
+  const [ev, rv] = await Promise.all([googleGeminiEmbeddingVector(o), googleGeminiEmbeddingVector(r)]);
+  let chaos;
+  if (ev && rv) {
+    const sim = cosineSimilarityVec(ev, rv);
+    chaos = Math.round((1 - Math.max(0, Math.min(1, sim))) * 100);
+  } else {
+    chaos = jaccardChaosBase(o, r);
+  }
+  const w1 = o.split(/\s+/).filter(Boolean).length;
+  const w2 = r.split(/\s+/).filter(Boolean).length;
+  const maxw = Math.max(w1, w2, 1);
+  if (Math.abs(w1 - w2) / maxw > 0.5) chaos += 10;
+  return Math.min(99, Math.max(0, chaos));
+}
+
 app.post('/translate', async (req, res) => {
   try {
     const text = String(req.body.text ?? '').trim();
@@ -405,10 +485,14 @@ app.post('/process', upload.single('audio'), async (req, res) => {
       reverseEnglish = await myMemoryTranslate(recognizedText, `${translateSource}|en`);
     }
 
+    const reverseNorm = normalizeTranslationText(String(reverseEnglish ?? ''));
+    const chaosScore = await computeChaosScore(originalEnglish, reverseNorm);
+
     res.json({
       recognizedText,
-      reverseEnglish: normalizeTranslationText(String(reverseEnglish ?? '')),
+      reverseEnglish: reverseNorm,
       closenessScore: null,
+      chaosScore,
       sttSource,
       ...(sttSource === 'mock' && sttMockReason ? { sttMockReason } : {}),
     });
@@ -479,9 +563,12 @@ app.post('/process-english', upload.single('audio'), async (req, res) => {
       recognizedText = mockEnglishStt(originalEnglish);
       sttSource = 'mock';
     }
+    const rev = normalizeTranslationText(String(recognizedText ?? ''));
+    const chaosScore = await computeChaosScore(originalEnglish, rev);
     res.json({
       recognizedText,
-      reverseEnglish: recognizedText,
+      reverseEnglish: rev,
+      chaosScore,
       sttSource,
       ...(sttSource === 'mock' && sttMockReason ? { sttMockReason } : {}),
     });
@@ -502,8 +589,64 @@ app.get('/health', (_req, res) => {
       ttsReversedWav: Boolean(GOOGLE_KEY),
       reverseAudioWav: true,
       processEnglish: Boolean(GOOGLE_KEY),
+      chaosScore: true,
     },
   });
+});
+
+/**
+ * Validates an iOS App Store receipt for the session pass product (non-consumable / one-time SKU).
+ * Set APPLE_SHARED_SECRET in env for subscriptions; optional for simple IAP.
+ */
+app.post('/validate-receipt', async (req, res) => {
+  try {
+    const receiptData = String(req.body.receiptData ?? req.body['receipt-data'] ?? '').trim();
+    const productId = String(req.body.productId ?? 'com.babelingo.app.session_pass').trim();
+    if (!receiptData) return res.status(400).json({ ok: false, error: 'missing_receipt' });
+
+    const secret = process.env.APPLE_SHARED_SECRET?.trim();
+    const body = {
+      'receipt-data': receiptData,
+      ...(secret ? { password: secret } : {}),
+    };
+
+    const prodUrl = 'https://buy.itunes.apple.com/verifyReceipt';
+    const sandboxUrl = 'https://sandbox.itunes.apple.com/verifyReceipt';
+
+    async function postVerify(url) {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return r.json();
+    }
+
+    let data = await postVerify(prodUrl);
+    if (data.status === 21007) {
+      data = await postVerify(sandboxUrl);
+    }
+
+    if (data.status !== 0) {
+      return res.status(400).json({ ok: false, error: 'apple_verify_failed', status: data.status });
+    }
+
+    const inApp = data.receipt?.in_app;
+    const latest = data.latest_receipt_info;
+    const rows = Array.isArray(inApp) ? inApp : [];
+    const rows2 = Array.isArray(latest) ? latest : [];
+    const all = [...rows, ...rows2];
+    const hasProduct = all.some((x) => x?.product_id === productId);
+
+    return res.json({
+      ok: true,
+      valid: hasProduct,
+      productId,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ ok: false, error: 'validate_receipt_failed' });
+  }
 });
 
 /** Opt-in event sink for Phase 5 analytics (logs one JSON line per event when LOG_ANALYTICS=1). */

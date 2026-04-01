@@ -1,3 +1,4 @@
+import { ChaosCounter } from '@/components/ChaosCounter';
 import { MomentSharePanel } from '@/components/MomentSharePanel';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
@@ -132,10 +133,18 @@ export default function RevealScreen() {
 
       <View style={[styles.block, styles.blockAccent]}>
         <Text style={styles.bigLabel}>
-          {appGame === 'reverse_audio' ? 'You said (final take)' : 'Came back as'}
+          {lastResult.turnSkipped
+            ? 'Skipped'
+            : appGame === 'reverse_audio'
+              ? 'You said (final take)'
+              : 'Came back as'}
         </Text>
         <Text style={styles.big}>{normalizeTranslationText(lastResult.reverseEnglish)}</Text>
       </View>
+
+      {lastResult.turnSkipped ? null : (
+        <ChaosCounter variant="hero" score={lastResult.chaosScore ?? 0} />
+      )}
 
       {babelChain.length > 1 ? (
         <View style={styles.chainBox}>

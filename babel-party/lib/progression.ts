@@ -4,6 +4,11 @@ import type { AppGameId, GameMode } from '@/lib/types';
 /** Full arc length (rounds 1–7 scripted; round 7+ reuses “all-out” rules if extended later). */
 export const TOTAL_GAME_ROUNDS = 7;
 
+/** Free tier (F-07): Echo + Regular + up to 3 players, 3 rounds without session pass. */
+export const FREE_TIER_ROUNDS = 3;
+export const FREE_TIER_MAX_PLAYERS = 3;
+export const PAID_TIER_MAX_PLAYERS = 8;
+
 export type RoundStage = {
   headline: string;
   tagline: string;

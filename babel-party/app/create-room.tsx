@@ -1,15 +1,20 @@
 import { BackLink } from '@/components/BackLink';
+import { PaywallModal } from '@/components/PaywallModal';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
-import { trackEvent } from '@/lib/analytics';
+import { trackRoomCreated } from '@/lib/analytics';
 import { defaultLanguagePool } from '@/lib/languages';
 import { useGameStore } from '@/lib/gameStore';
-import { TOTAL_GAME_ROUNDS } from '@/lib/progression';
+import { FREE_TIER_MAX_PLAYERS, TOTAL_GAME_ROUNDS } from '@/lib/progression';
+import {
+  effectiveMaxPlayers,
+  useSessionEntitlementsStore,
+} from '@/lib/sessionEntitlementsStore';
 import type { AppGameId } from '@/lib/types';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 function Stepper(props: {
@@ -76,10 +81,21 @@ export default function CreateRoomScreen() {
   const router = useRouter();
   const settings = useGameStore((s) => s.settings);
   const updateSettings = useGameStore((s) => s.updateSettings);
+  const sessionPassActive = useSessionEntitlementsStore((s) => s.sessionPassActive);
 
-  const [groupPlayerCount, setGroupPlayerCount] = useState(() => defaultGroupCount(settings.playerCount));
+  const maxPlayers = effectiveMaxPlayers(sessionPassActive);
+  const [groupPlayerCount, setGroupPlayerCount] = useState(() =>
+    Math.min(defaultGroupCount(settings.playerCount), maxPlayers),
+  );
   const [teams, setTeams] = useState(settings.teamsEnabled);
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const soloCopy = soloCardCopy(settings.appGame);
+
+  useEffect(() => {
+    if (!sessionPassActive) {
+      setGroupPlayerCount((c) => Math.min(c, FREE_TIER_MAX_PLAYERS));
+    }
+  }, [sessionPassActive]);
 
   const applyAndGoLobby = (opts: { playerCount: number; teamsEnabled: boolean; roomMode: 'solo' | 'party' }) => {
     updateSettings({
@@ -90,13 +106,21 @@ export default function CreateRoomScreen() {
       category: 'mixed',
       languageCodes: defaultLanguagePool(),
     });
-    trackEvent('room_created', {
-      playerCount: opts.playerCount,
-      rounds: TOTAL_GAME_ROUNDS,
-      teams: opts.teamsEnabled,
-      room_mode: opts.roomMode,
+    trackRoomCreated({
+      mode: settings.appGame,
+      vibe: settings.gameMode,
+      player_count: opts.playerCount,
+      is_solo: opts.roomMode === 'solo',
     });
     router.push('/lobby');
+  };
+
+  const onPlayerCountChange = (n: number) => {
+    if (n > maxPlayers && !sessionPassActive) {
+      setPaywallOpen(true);
+      return;
+    }
+    setGroupPlayerCount(n);
   };
 
   const onSoloMode = () => {
@@ -115,10 +139,19 @@ export default function CreateRoomScreen() {
     <Screen
       title="Create room"
       subtitle={`${gameLabel(settings.appGame)} · group or solo.`}>
+      <PaywallModal
+        visible={paywallOpen}
+        triggerPoint="create_room_fourth_player"
+        onClose={() => setPaywallOpen(false)}
+        onUnlocked={() => setGroupPlayerCount(4)}
+      />
       <BackLink fallbackHref="/game-mode" />
 
       <Text style={styles.sectionLead}>Multiplayer</Text>
-      <Stepper label="Players" value={groupPlayerCount} min={2} max={16} onChange={setGroupPlayerCount} />
+      <Stepper label="Players" value={groupPlayerCount} min={2} max={maxPlayers} onChange={onPlayerCountChange} />
+      {!sessionPassActive ? (
+        <Text style={styles.lockHint}>Free tier: up to {FREE_TIER_MAX_PLAYERS} players. Unlock for up to 8.</Text>
+      ) : null}
 
       <Text style={styles.section}>Teams</Text>
       <Pressable style={[styles.toggle, teams && styles.toggleOn]} onPress={() => setTeams(!teams)}>
@@ -148,6 +181,13 @@ export default function CreateRoomScreen() {
 }
 
 const styles = StyleSheet.create({
+  lockHint: {
+    fontFamily: Font.body,
+    fontSize: 13,
+    color: Colors.party.textMuted,
+    marginTop: 8,
+    lineHeight: 19,
+  },
   sectionLead: {
     marginTop: 8,
     marginBottom: 12,

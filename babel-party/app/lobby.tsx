@@ -5,7 +5,7 @@ import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
-import { TOTAL_GAME_ROUNDS } from '@/lib/progression';
+import { effectiveTotalRounds, useSessionEntitlementsStore } from '@/lib/sessionEntitlementsStore';
 import type { AppGameId } from '@/lib/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -20,7 +20,9 @@ function shortGameLabel(id: AppGameId): string {
 export default function LobbyScreen() {
   const router = useRouter();
   const settings = useGameStore((s) => s.settings);
+  const updateSettings = useGameStore((s) => s.updateSettings);
   const startSessionFromLobby = useGameStore((s) => s.startSessionFromLobby);
+  const sessionPassActive = useSessionEntitlementsStore((s) => s.sessionPassActive);
 
   const [names, setNames] = useState<string[]>(() =>
     Array.from({ length: settings.playerCount }, (_, i) => `Player ${i + 1}`),
@@ -34,15 +36,17 @@ export default function LobbyScreen() {
   }, [settings.playerCount]);
 
   const onStart = () => {
+    const rounds = effectiveTotalRounds(sessionPassActive);
+    updateSettings({ rounds });
     startSessionFromLobby(names);
-    trackEvent('lobby_start');
+    trackEvent('lobby_start', { rounds, session_pass: sessionPassActive });
     router.replace('/round-intro');
   };
 
   return (
     <Screen
       title="Lobby"
-      subtitle={`${shortGameLabel(settings.appGame)} · ${settings.gameMode === 'mayhem' ? 'Mayhem' : 'Regular'} · ${TOTAL_GAME_ROUNDS} rounds · ${settings.teamsEnabled ? 'Team totals win' : 'Solo scoring'}`}
+      subtitle={`${shortGameLabel(settings.appGame)} · ${settings.gameMode === 'mayhem' ? 'Mayhem' : 'Regular'} · ${effectiveTotalRounds(sessionPassActive)} rounds · ${settings.teamsEnabled ? 'Team totals win' : 'Solo scoring'}`}
       keyboardAvoiding
       footer={<PrimaryButton title="Everyone’s in — start" onPress={onStart} />}>
       <BackLink fallbackHref="/create-room" />

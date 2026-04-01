@@ -1,4 +1,5 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { ScoreboardRecapShare } from '@/components/ScoreboardRecapShare';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
@@ -11,8 +12,9 @@ import {
   topScorersInRound,
 } from '@/lib/sessionHighlights';
 import { computeTeamTotals } from '@/lib/teamScores';
+import type { PosterThemeId } from '@/lib/posterThemes';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function ScoreboardScreen() {
@@ -23,7 +25,16 @@ export default function ScoreboardScreen() {
   const results = useGameStore((s) => s.results);
   const goScoreboardToNext = useGameStore((s) => s.goScoreboardToNext);
 
+  const [recapThemeId, setRecapThemeId] = useState<PosterThemeId>(() => {
+    const pool = ['retro', 'neon', 'minimal'] as PosterThemeId[];
+    return pool[Math.floor(Math.random() * pool.length)]!;
+  });
+
   const sorted = [...players].sort((a, b) => b.totalScore - a.totalScore);
+  const sessionHighChaos = useMemo(
+    () => Math.max(0, ...results.map((r) => r.chaosScore ?? 0)),
+    [results],
+  );
   const teamTotals = useMemo(() => computeTeamTotals(players), [players]);
   const roundLeaders = useMemo(() => topScorersInRound(results, currentRound), [results, currentRound]);
   const babelChain = useMemo(
@@ -99,6 +110,20 @@ export default function ScoreboardScreen() {
           </Text>
         </View>
       ) : null}
+
+      {sessionHighChaos > 0 ? (
+        <View style={styles.chaosSessionBanner}>
+          <Text style={styles.chaosSessionTitle}>Session chaos high</Text>
+          <Text style={styles.chaosSessionNum}>{sessionHighChaos}</Text>
+        </View>
+      ) : null}
+
+      <ScoreboardRecapShare
+        results={results}
+        currentRound={currentRound}
+        themeId={recapThemeId}
+        onThemeChange={setRecapThemeId}
+      />
 
       {settings.teamsEnabled && teamTotals ? (
         <View style={styles.teamBanner}>
@@ -265,6 +290,29 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     marginTop: 12,
     textAlign: 'center',
+  },
+  chaosSessionBanner: {
+    backgroundColor: Colors.party.card,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 2,
+    borderColor: Colors.party.accentPop,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  chaosSessionTitle: {
+    fontFamily: Font.bodyBold,
+    fontSize: 12,
+    color: Colors.party.accentPop,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  chaosSessionNum: {
+    fontFamily: Font.title,
+    fontSize: 28,
+    color: Colors.party.accentPop,
   },
   list: { gap: 10 },
   row: {

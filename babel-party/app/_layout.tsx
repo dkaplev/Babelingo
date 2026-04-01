@@ -11,7 +11,9 @@ import 'react-native-reanimated';
 
 import { GameThemeProvider } from '@/components/GameThemeProvider';
 import Colors from '@/constants/Colors';
+import { trackAppOpen } from '@/lib/analytics';
 import { audioModePlaybackSpeaker } from '@/lib/audioMode';
+import { isFirstAppLaunch, markFirstLaunchDone } from '@/lib/onboarding';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -59,6 +61,15 @@ export default function RootLayout() {
     })();
   }, [loaded]);
 
+  useEffect(() => {
+    if (!loaded) return;
+    void (async () => {
+      const first = await isFirstAppLaunch();
+      trackAppOpen(first);
+      await markFirstLaunchDone();
+    })();
+  }, [loaded]);
+
   if (!loaded) return null;
 
   return (
@@ -71,6 +82,7 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: Colors.party.surface },
           }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="demo" />
           <Stack.Screen name="pick-game" />
           <Stack.Screen name="how-it-works" />
           <Stack.Screen name="game-mode" />

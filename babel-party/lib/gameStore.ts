@@ -1,6 +1,7 @@
 import {
   defaultLanguagePool,
   excludeEnglishFromPool,
+  languageByCode,
   languageCodesForBands,
   type LanguageDifficultyBand,
 } from '@/lib/languages';
@@ -151,6 +152,8 @@ export const useGameStore = create<
     pickLanguageForCurrentTurn: () => string;
     resetReverseTurn: () => void;
     commitReverseGuess: (uri: string) => void;
+    /** F-06: skip when recording/processing fails — 0 points, chaos 0. */
+    commitSkippedTurn: () => void;
   }
 >((set, get) => ({
   settings: defaultSettings(),
@@ -208,6 +211,42 @@ export const useGameStore = create<
       reverseStep: 2,
       listensRemaining: MAX_PHRASE_PLAYS,
       pendingRecordingUri: null,
+    }),
+
+  commitSkippedTurn: () =>
+    set((s) => {
+      const id = s.playerOrder[s.turnIndex];
+      const player = s.players.find((p) => p.id === id) ?? null;
+      if (!player || !s.roundPhrase) return s;
+      const langCode = s.roundLanguages[s.turnIndex] ?? s.currentLanguageCode ?? 'es';
+      const lang = languageByCode(langCode);
+      const r: TurnResult = {
+        roundNumber: s.currentRound,
+        turnOrderInRound: s.turnIndex,
+        playerId: player.id,
+        playerName: player.name,
+        phraseOriginal: s.roundPhrase.text,
+        phraseCategory: s.roundPhrase.category,
+        languageCode: langCode,
+        languageLabel: lang?.label ?? langCode,
+        translatedText: s.translatedText ?? '',
+        recognizedText: null,
+        reverseEnglish: 'Skipped',
+        closenessScore: 0,
+        languageBonus: 0,
+        funnyVoteBonus: 0,
+        totalTurnScore: 0,
+        funnyLabel: 'Skipped',
+        usedMockPipeline: true,
+        chaosScore: 0,
+        turnSkipped: true,
+      };
+      return {
+        lastResult: r,
+        results: [...s.results, r],
+        funnyVotePending: false,
+        pendingRecordingUri: null,
+      };
     }),
 
   updateSettings: (partial) =>

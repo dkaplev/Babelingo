@@ -1,12 +1,12 @@
 import { ArcadeMenuPrompt } from '@/components/ArcadeMenuPrompt';
 import { PressStartPrompt } from '@/components/PressStartPrompt';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { useRouter, type Href } from 'expo-router';
-import { useEffect } from 'react';
 import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 /** Title art is 1024×558 — layout uses resizeMode contain */
@@ -19,10 +19,6 @@ export default function HomeScreen() {
   const logoWidth = Math.min(windowWidth - 44, 400);
   const logoHeight = logoWidth / LOGO_ASPECT;
 
-  useEffect(() => {
-    trackEvent('session_start');
-  }, []);
-
   const startGame = () => {
     resetSession();
     trackEvent('tap_start_game');
@@ -32,6 +28,11 @@ export default function HomeScreen() {
   const openHowItWorks = () => {
     trackEvent('tap_how_it_works_home');
     router.push('/how-it-works');
+  };
+
+  const tryDemo = () => {
+    trackEvent('tap_try_demo_home');
+    router.push('/demo' as Href);
   };
 
   return (
@@ -61,6 +62,7 @@ export default function HomeScreen() {
         Hear a wild phrase, repeat the chaos, watch English melt — pass one phone around the whole crew.
       </Text>
       <PressStartPrompt onPress={startGame} />
+      <PrimaryButton title="Try it now — solo demo" variant="dim" onPress={tryDemo} style={{ marginTop: 12 }} />
       <ArcadeMenuPrompt
         onPress={openHowItWorks}
         headline="▶ HOW IT WORKS"

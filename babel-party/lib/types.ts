@@ -72,4 +72,8 @@ export type TurnResult = {
   funnyLabel: string;
   usedMockPipeline: boolean;
   sttMockReason?: SttMockReason;
+  /** Semantic drift 0–99 from server (F-02); skipped turns use 0. */
+  chaosScore?: number;
+  /** Player skipped recording (F-06). */
+  turnSkipped?: boolean;
 };

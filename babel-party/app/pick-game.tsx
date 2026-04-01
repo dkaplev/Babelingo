@@ -1,12 +1,15 @@
 import { BackLink } from '@/components/BackLink';
+import { PaywallModal } from '@/components/PaywallModal';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { getPartyPalette } from '@/lib/partyPalette';
+import { useSessionEntitlementsStore } from '@/lib/sessionEntitlementsStore';
 import type { AppGameId } from '@/lib/types';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 const GAMES: { id: AppGameId; title: string; body: string }[] = [
@@ -30,8 +33,17 @@ const GAMES: { id: AppGameId; title: string; body: string }[] = [
 export default function PickGameScreen() {
   const router = useRouter();
   const updateSettings = useGameStore((s) => s.updateSettings);
+  const sessionPassActive = useSessionEntitlementsStore((s) => s.sessionPassActive);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallTrigger, setPaywallTrigger] = useState('pick_game_locked_mode');
 
   const choose = (id: AppGameId) => {
+    const locked = !sessionPassActive && id !== 'echo_translator';
+    if (locked) {
+      setPaywallTrigger(`pick_game_${id}`);
+      setPaywallOpen(true);
+      return;
+    }
     updateSettings({ appGame: id });
     trackEvent('pick_game', { game: id });
     router.push('/game-mode');
@@ -39,17 +51,22 @@ export default function PickGameScreen() {
 
   return (
     <Screen title="Pick a game" subtitle="Three modes — tap a card to continue.">
+      <PaywallModal visible={paywallOpen} triggerPoint={paywallTrigger} onClose={() => setPaywallOpen(false)} />
       <BackLink fallbackHref="/" />
       <View style={styles.stack}>
         {GAMES.map((g) => {
           const pal = getPartyPalette(g.id);
+          const locked = !sessionPassActive && g.id !== 'echo_translator';
           return (
             <View
               key={g.id}
               style={[styles.card, { borderColor: pal.neonStroke, backgroundColor: pal.card }]}>
-              <Text style={[styles.cardTitle, { color: pal.accentPop }]}>{g.title}</Text>
+              <Text style={[styles.cardTitle, { color: pal.accentPop }]}>
+                {g.title}
+                {locked ? ' 🔒' : ''}
+              </Text>
               <Text style={[styles.cardBody, { color: pal.text }]}>{g.body}</Text>
-              <PrimaryButton title="Play" onPress={() => choose(g.id)} />
+              <PrimaryButton title={locked ? 'Unlock to play' : 'Play'} onPress={() => choose(g.id)} />
             </View>
           );
         })}

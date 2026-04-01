@@ -1,3 +1,4 @@
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
@@ -21,12 +22,13 @@ export default function ProcessingScreen() {
   const router = useRouter();
   const ran = useRef(false);
   const [line] = useState(() => COPY[Math.floor(Math.random() * COPY.length)]!);
+  const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
 
-    (async () => {
+    void (async () => {
       const store = useGameStore.getState();
       const player = currentPlayer(store);
       const phrase = store.roundPhrase;
@@ -60,7 +62,14 @@ export default function ProcessingScreen() {
         mock: out.usedMockPipeline,
         language: langCode,
         app_game: appGame,
+        chaos_score: out.chaosScore,
+        timed_out: out.timedOut,
       });
+
+      if (out.timedOut) {
+        setTimedOut(true);
+        return;
+      }
 
       const totalTurnScore = (out.closenessScore + out.languageBonus) as number;
 
@@ -83,12 +92,37 @@ export default function ProcessingScreen() {
         funnyLabel: out.funnyLabel,
         usedMockPipeline: out.usedMockPipeline,
         sttMockReason: out.sttMockReason,
+        chaosScore: out.chaosScore,
       };
 
       useGameStore.getState().commitTurnResult(result);
       router.replace('/reveal');
     })();
   }, [router]);
+
+  const retry = () => {
+    ran.current = false;
+    setTimedOut(false);
+    router.replace('/turn');
+  };
+
+  const skipTurn = () => {
+    useGameStore.getState().commitSkippedTurn();
+    router.replace('/reveal');
+  };
+
+  if (timedOut) {
+    return (
+      <Screen title="Taking too long" subtitle="The room shouldn’t stall — try again or skip.">
+        <View style={styles.center}>
+          <Text style={styles.warn}>Something went wrong — usually network or a busy server.</Text>
+          <PrimaryButton title="Retry" onPress={retry} />
+          <View style={{ height: 12 }} />
+          <PrimaryButton variant="ghost" title="Skip this turn" onPress={skipTurn} />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen title="Hold tight" subtitle={line}>
@@ -110,5 +144,14 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textAlign: 'center',
     maxWidth: 280,
+  },
+  warn: {
+    fontFamily: Font.body,
+    color: Colors.party.danger,
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
+    maxWidth: 300,
+    marginBottom: 24,
   },
 });

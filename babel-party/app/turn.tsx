@@ -1,12 +1,14 @@
 import { usePartyPalette } from '@/components/GameThemeProvider';
 import { PlaybackSpeedSlider } from '@/components/PlaybackSpeedSlider';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { RecordingErrorBanner } from '@/components/RecordingErrorBanner';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { audioModePlaybackSpeaker, audioModeRecording } from '@/lib/audioMode';
 import { MAX_PHRASE_PLAYS, currentPlayer, useGameStore } from '@/lib/gameStore';
+import { requestMicrophonePermission } from '@/lib/recording';
 import { clampPlaybackSpeed, PLAYBACK_SPEED_DEFAULT } from '@/lib/playbackSpeed';
 import { languageByCode } from '@/lib/languages';
 import { RECORDING_OPTIONS_GOOGLE_STT } from '@/lib/recordingOptions';
@@ -46,6 +48,7 @@ function EchoBabelTurnScreen() {
   const nextListenConsumed = useGameStore((s) => s.nextListenConsumed);
   const setRecordingUri = useGameStore((s) => s.setRecordingUri);
   const pendingRecordingUri = useGameStore((s) => s.pendingRecordingUri);
+  const commitSkippedTurn = useGameStore((s) => s.commitSkippedTurn);
   const resetSession = useGameStore((s) => s.resetSession);
   const phase = useGameStore((s) => s.phase);
 
@@ -57,6 +60,8 @@ function EchoBabelTurnScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [phrasePlaybackBusy, setPhrasePlaybackBusy] = useState(false);
+  const [micDenied, setMicDenied] = useState(false);
+  const [showSkip, setShowSkip] = useState(false);
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const player = useGameStore((s) => currentPlayer(s));
@@ -250,9 +255,14 @@ function EchoBabelTurnScreen() {
     Speech.stop();
     await stopPipelineTtsPlayback();
     setRecordingUri(null);
+    const pr = await requestMicrophonePermission();
+    if (!pr.ok) {
+      setMicDenied(true);
+      setShowSkip(true);
+      return;
+    }
+    setMicDenied(false);
     try {
-      const perm = await Audio.requestPermissionsAsync();
-      if (!perm.granted) return;
       await new Promise((r) => setTimeout(r, 50));
       await audioModeRecording();
       const rec = new Audio.Recording();
@@ -264,16 +274,18 @@ function EchoBabelTurnScreen() {
       if (tick.current) clearInterval(tick.current);
       tick.current = setInterval(() => setSeconds((s) => s + 1), 1000);
     } catch {
-      /* ignore */
+      setShowSkip(true);
     }
   };
 
   const stopRecording = async () => {
     if (!recording) return;
+    const elapsed = seconds;
     try {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       setRecordingUri(uri);
+      if (elapsed < 1) setShowSkip(true);
     } finally {
       setRecording(null);
       setIsRecording(false);
@@ -333,17 +345,32 @@ function EchoBabelTurnScreen() {
       title={`${player.name}’s turn`}
       subtitle={lang ? `${lang.label} · listen, then record, then submit` : 'Loading…'}
       footer={
-        <PrimaryButton
-          title="Submit turn"
-          onPress={onSubmit}
-          disabled={!pendingRecordingUri || isRecording}
-          variant={pendingRecordingUri && !isRecording ? 'primary' : 'dim'}
-          accessibilityLabel="Submit turn for processing"
-          accessibilityState={{ selected: Boolean(pendingRecordingUri && !isRecording) }}
-        />
+        <View style={{ gap: 10 }}>
+          {showSkip || micDenied ? (
+            <PrimaryButton
+              variant="ghost"
+              title="Skip this turn"
+              onPress={() => {
+                commitSkippedTurn();
+                router.replace('/reveal');
+              }}
+            />
+          ) : null}
+          <PrimaryButton
+            title="Submit turn"
+            onPress={onSubmit}
+            disabled={!pendingRecordingUri || isRecording}
+            variant={pendingRecordingUri && !isRecording ? 'primary' : 'dim'}
+            accessibilityLabel="Submit turn for processing"
+            accessibilityState={{ selected: Boolean(pendingRecordingUri && !isRecording) }}
+          />
+        </View>
       }>
       {menuRow}
       <PlaybackSpeedSlider />
+      {micDenied ? (
+        <RecordingErrorBanner message="Microphone is off — turn it on so we can hear your attempt, or skip this turn." />
+      ) : null}
       {needsTranslationFix ? (
         <View style={styles.errorCard}>
           <Text style={styles.warn}>
@@ -438,6 +465,7 @@ function ReverseTurnScreen() {
   const reverseGuessUri = useGameStore((s) => s.reverseGuessUri);
   const commitReverseGuess = useGameStore((s) => s.commitReverseGuess);
   const resetReverseTurn = useGameStore((s) => s.resetReverseTurn);
+  const commitSkippedTurn = useGameStore((s) => s.commitSkippedTurn);
 
   const [passConfirmed, setPassConfirmed] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
@@ -445,6 +473,8 @@ function ReverseTurnScreen() {
   const [seconds, setSeconds] = useState(0);
   const [phrasePlaybackBusy, setPhrasePlaybackBusy] = useState(false);
   const [reverseError, setReverseError] = useState<string | null>(null);
+  const [micDenied, setMicDenied] = useState(false);
+  const [showSkip, setShowSkip] = useState(false);
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const player = useGameStore((s) => currentPlayer(s));
@@ -560,9 +590,14 @@ function ReverseTurnScreen() {
     if (reverseStep === 2) {
       setRecordingUri(null);
     }
+    const pr = await requestMicrophonePermission();
+    if (!pr.ok) {
+      setMicDenied(true);
+      setShowSkip(true);
+      return;
+    }
+    setMicDenied(false);
     try {
-      const perm = await Audio.requestPermissionsAsync();
-      if (!perm.granted) return;
       await new Promise((r) => setTimeout(r, 50));
       await audioModeRecording();
       const rec = new Audio.Recording();
@@ -574,12 +609,13 @@ function ReverseTurnScreen() {
       if (tick.current) clearInterval(tick.current);
       tick.current = setInterval(() => setSeconds((s) => s + 1), 1000);
     } catch {
-      /* ignore */
+      setShowSkip(true);
     }
   };
 
   const stopRecording = async () => {
     if (!recording) return;
+    const elapsed = seconds;
     try {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
@@ -590,6 +626,7 @@ function ReverseTurnScreen() {
           setRecordingUri(uri);
         }
       }
+      if (elapsed < 1) setShowSkip(true);
     } finally {
       setRecording(null);
       setIsRecording(false);
@@ -665,6 +702,16 @@ function ReverseTurnScreen() {
       }
       footer={
         <View style={{ gap: 10 }}>
+          {showSkip || micDenied ? (
+            <PrimaryButton
+              variant="ghost"
+              title="Skip this turn"
+              onPress={() => {
+                commitSkippedTurn();
+                router.replace('/reveal');
+              }}
+            />
+          ) : null}
           {reverseStep === 2 ? (
             <PrimaryButton variant="ghost" title="Re-do step 1 (discard progress)" onPress={resetReverseTurn} />
           ) : null}
@@ -679,6 +726,9 @@ function ReverseTurnScreen() {
       }>
       {menuRow}
       <PlaybackSpeedSlider hint="Step 1: backward clue is time-stretched on the phone (native) or slowed in synthesis (web). Step 2 stays normal speed." />
+      {micDenied ? (
+        <RecordingErrorBanner message="Microphone is off — enable it in Settings, or skip this turn so the party keeps moving." />
+      ) : null}
 
       {!pipelineOk ? (
         <View style={styles.errorCard}>

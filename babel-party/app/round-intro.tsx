@@ -1,15 +1,17 @@
 import { usePartyPalette } from '@/components/GameThemeProvider';
 import { BackLink } from '@/components/BackLink';
+import { HowToPlayModal } from '@/components/HowToPlayModal';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
-import { roundStageForGame, TOTAL_GAME_ROUNDS } from '@/lib/progression';
+import { hasSeenHowToForMode, markHowToSeenForMode } from '@/lib/onboarding';
+import { roundStageForGame } from '@/lib/progression';
 import { funniestResultInRound } from '@/lib/sessionHighlights';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function RoundIntroScreen() {
@@ -20,6 +22,7 @@ export default function RoundIntroScreen() {
   const appGame = useGameStore((s) => s.settings.appGame);
   const players = useGameStore((s) => s.players);
   const results = useGameStore((s) => s.results);
+  const totalRounds = useGameStore((s) => s.settings.rounds);
   const beginRound = useGameStore((s) => s.beginRound);
   const soloMode = players.length === 1;
 
@@ -33,21 +36,45 @@ export default function RoundIntroScreen() {
     return funniestResultInRound(results, currentRound - 1);
   }, [results, currentRound]);
 
-  const onStart = () => {
+  const [howToOpen, setHowToOpen] = useState(false);
+  const startLock = useRef(false);
+
+  const doStart = () => {
+    if (startLock.current) return;
+    startLock.current = true;
     beginRound();
     trackEvent('round_intro_start', { round: currentRound, mode: gameMode });
     router.replace('/turn');
   };
 
+  const onStart = () => {
+    void (async () => {
+      if (currentRound === 1 && !(await hasSeenHowToForMode(appGame))) {
+        setHowToOpen(true);
+        return;
+      }
+      doStart();
+    })();
+  };
+
+  const dismissHowTo = () => {
+    void (async () => {
+      await markHowToSeenForMode(appGame);
+      setHowToOpen(false);
+      doStart();
+    })();
+  };
+
   return (
     <Screen
       title={stage.headline}
-      subtitle={`${gameTitle} · ${modeLabel} · Round ${currentRound} of ${TOTAL_GAME_ROUNDS}`}
+      subtitle={`${gameTitle} · ${modeLabel} · Round ${currentRound} of ${totalRounds}`}
       footer={<PrimaryButton title="Start this round" onPress={onStart} />}>
+      <HowToPlayModal visible={howToOpen} appGame={appGame} onClose={dismissHowTo} />
       {currentRound === 1 ? <BackLink fallbackHref="/lobby" label="← Lobby" /> : null}
 
-      <View style={styles.progressRow} accessibilityLabel={`Round ${currentRound} of ${TOTAL_GAME_ROUNDS}`}>
-        {Array.from({ length: TOTAL_GAME_ROUNDS }, (_, i) => (
+      <View style={styles.progressRow} accessibilityLabel={`Round ${currentRound} of ${totalRounds}`}>
+        {Array.from({ length: totalRounds }, (_, i) => (
           <View
             key={i}
             style={[

@@ -3,11 +3,11 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
-import { trackEvent } from '@/lib/analytics';
+import { trackEvent, trackSessionCompleted } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { computeTeamTotals } from '@/lib/teamScores';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function SummaryScreen() {
@@ -22,7 +22,11 @@ export default function SummaryScreen() {
 
   const funniest = useMemo(
     () =>
-      [...results].sort((a, b) => a.closenessScore - b.closenessScore || b.reverseEnglish.length - a.reverseEnglish.length)[0],
+      [...results].sort(
+        (a, b) =>
+          (b.chaosScore ?? 0) - (a.chaosScore ?? 0) ||
+          b.reverseEnglish.length - a.reverseEnglish.length,
+      )[0],
     [results],
   );
 
@@ -30,6 +34,19 @@ export default function SummaryScreen() {
     () => [...results].sort((a, b) => b.closenessScore - a.closenessScore)[0],
     [results],
   );
+
+  const telemetryOnce = useRef(false);
+  useEffect(() => {
+    if (telemetryOnce.current) return;
+    telemetryOnce.current = true;
+    const totalChaos = results.reduce((acc, r) => acc + (r.chaosScore ?? 0), 0);
+    trackSessionCompleted({
+      mode: settings.appGame,
+      vibe: settings.gameMode,
+      rounds_played: settings.rounds,
+      total_chaos: totalChaos,
+    });
+  }, [results, settings.appGame, settings.gameMode, settings.rounds]);
 
   return (
     <Screen

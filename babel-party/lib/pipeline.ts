@@ -1,3 +1,4 @@
+import { estimateChaosFromTexts } from '@/lib/chaosScore';
 import { getPipelineBaseUrl } from '@/lib/env';
 import { languageByCode } from '@/lib/languages';
 import { normalizeTranslationText } from '@/lib/normalizeTranslation';
@@ -6,6 +7,18 @@ import type { PhraseCategory, SttMockReason } from '@/lib/types';
 import { translateEnTo, translateToEnglish } from '@/lib/translate';
 
 const API = getPipelineBaseUrl();
+
+const PROCESS_TIMEOUT_MS = 8000;
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), PROCESS_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 function hashString(s: string): number {
   let h = 0;
@@ -42,6 +55,9 @@ export type PipelineOutput = {
   funnyLabel: string;
   usedMockPipeline: boolean;
   sttMockReason?: SttMockReason;
+  chaosScore?: number;
+  /** True when the request aborted due to timeout (F-06). */
+  timedOut?: boolean;
 };
 
 export async function runEchoPipeline(input: PipelineInput): Promise<PipelineOutput> {
@@ -60,7 +76,7 @@ export async function runEchoPipeline(input: PipelineInput): Promise<PipelineOut
       form.append('translatedForeign', input.translatedForeign);
       form.append('languageCode', input.languageCode);
 
-      const res = await fetch(`${API.replace(/\/$/, '')}/process`, {
+      const res = await fetchWithTimeout(`${API.replace(/\/$/, '')}/process`, {
         method: 'POST',
         body: form,
       });
@@ -69,6 +85,7 @@ export async function runEchoPipeline(input: PipelineInput): Promise<PipelineOut
           recognizedText?: string | null;
           reverseEnglish?: string;
           closenessScore?: number;
+          chaosScore?: number;
           sttSource?: 'google' | 'mock';
           sttMockReason?: SttMockReason;
         };
@@ -85,6 +102,10 @@ export async function runEchoPipeline(input: PipelineInput): Promise<PipelineOut
         /** Treat as mock STT only when the server says so, or when there is no transcript and sttSource was never sent (older APIs). */
         const usedMockStt =
           json.sttSource === 'mock' || (json.sttSource == null && !hasTranscript);
+        const chaosScore =
+          typeof json.chaosScore === 'number'
+            ? json.chaosScore
+            : estimateChaosFromTexts(input.originalEnglish, reverseEnglish);
         return {
           recognizedText: json.recognizedText ? normalizeTranslationText(json.recognizedText) : null,
           reverseEnglish,
@@ -93,9 +114,29 @@ export async function runEchoPipeline(input: PipelineInput): Promise<PipelineOut
           funnyLabel: funnyLabel(closeness),
           usedMockPipeline: usedMockStt,
           sttMockReason: usedMockStt ? json.sttMockReason : undefined,
+          chaosScore,
         };
       }
-    } catch {
+    } catch (e) {
+      const aborted =
+        (e instanceof Error && e.name === 'AbortError') ||
+        (typeof e === 'object' &&
+          e !== null &&
+          'name' in e &&
+          String((e as { name: string }).name) === 'AbortError');
+      if (aborted) {
+        return {
+          recognizedText: null,
+          reverseEnglish: normalizeTranslationText(mockReverseFromOriginal(input.originalEnglish, input.languageCode)),
+          closenessScore: closenessFromTexts(input.originalEnglish, mockReverseFromOriginal(input.originalEnglish, input.languageCode)) as 0 | 1 | 2 | 3,
+          languageBonus: languageBonusFromBand(band),
+          funnyLabel: 'Something went wrong — try again',
+          usedMockPipeline: true,
+          sttMockReason: 'no_recording',
+          chaosScore: 0,
+          timedOut: true,
+        };
+      }
       /* fall through to mock */
     }
   }
@@ -118,6 +159,7 @@ export async function runEchoPipeline(input: PipelineInput): Promise<PipelineOut
     languageBonus: languageBonusFromBand(band),
     funnyLabel: funnyLabel(closenessScore),
     usedMockPipeline: true,
+    chaosScore: estimateChaosFromTexts(input.originalEnglish, reverseEnglish),
   };
 }
 
@@ -140,7 +182,7 @@ export async function runReversePipeline(input: ReversePipelineInput): Promise<P
       }
       form.append('originalEnglish', input.originalEnglish);
 
-      const res = await fetch(`${API.replace(/\/$/, '')}/process-english`, {
+      const res = await fetchWithTimeout(`${API.replace(/\/$/, '')}/process-english`, {
         method: 'POST',
         body: form,
       });
@@ -148,6 +190,7 @@ export async function runReversePipeline(input: ReversePipelineInput): Promise<P
         const json = (await res.json()) as {
           recognizedText?: string | null;
           reverseEnglish?: string;
+          chaosScore?: number;
           sttSource?: 'google' | 'mock';
           sttMockReason?: SttMockReason;
         };
@@ -159,6 +202,10 @@ export async function runReversePipeline(input: ReversePipelineInput): Promise<P
         const hasTranscript = Boolean(json.recognizedText && String(json.recognizedText).trim());
         const usedMockStt =
           json.sttSource === 'mock' || (json.sttSource == null && !hasTranscript);
+        const chaosScore =
+          typeof json.chaosScore === 'number'
+            ? json.chaosScore
+            : estimateChaosFromTexts(input.originalEnglish, reverseEnglish);
         return {
           recognizedText: json.recognizedText ? normalizeTranslationText(json.recognizedText) : null,
           reverseEnglish,
@@ -167,9 +214,31 @@ export async function runReversePipeline(input: ReversePipelineInput): Promise<P
           funnyLabel: funnyLabel(closeness),
           usedMockPipeline: usedMockStt,
           sttMockReason: usedMockStt ? json.sttMockReason : undefined,
+          chaosScore,
         };
       }
-    } catch {
+    } catch (e) {
+      const aborted =
+        (e instanceof Error && e.name === 'AbortError') ||
+        (typeof e === 'object' &&
+          e !== null &&
+          'name' in e &&
+          String((e as { name: string }).name) === 'AbortError');
+      if (aborted) {
+        const reverseEnglish = normalizeTranslationText(mockReverseFromOriginal(input.originalEnglish, 'en'));
+        const closeness = closenessFromTexts(input.originalEnglish, reverseEnglish) as 0 | 1 | 2 | 3;
+        return {
+          recognizedText: null,
+          reverseEnglish,
+          closenessScore: closeness,
+          languageBonus: languageBonusFromBand(band),
+          funnyLabel: 'Something went wrong — try again',
+          usedMockPipeline: true,
+          sttMockReason: 'no_recording',
+          chaosScore: 0,
+          timedOut: true,
+        };
+      }
       /* fall through */
     }
   }
@@ -183,5 +252,6 @@ export async function runReversePipeline(input: ReversePipelineInput): Promise<P
     languageBonus: languageBonusFromBand(band),
     funnyLabel: funnyLabel(closenessScore),
     usedMockPipeline: true,
+    chaosScore: estimateChaosFromTexts(input.originalEnglish, reverseEnglish),
   };
 }

@@ -1,4 +1,5 @@
 import { BackLink } from '@/components/BackLink';
+import { PaywallModal } from '@/components/PaywallModal';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
@@ -6,15 +7,23 @@ import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { TOTAL_GAME_ROUNDS } from '@/lib/progression';
+import { useSessionEntitlementsStore } from '@/lib/sessionEntitlementsStore';
 import type { GameMode } from '@/lib/types';
 import { useRouter, type Href } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function GameModeScreen() {
   const router = useRouter();
   const updateSettings = useGameStore((s) => s.updateSettings);
+  const sessionPassActive = useSessionEntitlementsStore((s) => s.sessionPassActive);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   const choose = (mode: GameMode) => {
+    if (mode === 'mayhem' && !sessionPassActive) {
+      setPaywallOpen(true);
+      return;
+    }
     updateSettings({ gameMode: mode, rounds: TOTAL_GAME_ROUNDS });
     trackEvent('game_mode_selected', { mode });
     router.push('/create-room');
@@ -22,6 +31,7 @@ export default function GameModeScreen() {
 
   return (
     <Screen title="Pick your vibe" subtitle="Same party energy — two ways to ramp the chaos.">
+      <PaywallModal visible={paywallOpen} triggerPoint="game_mode_mayhem" onClose={() => setPaywallOpen(false)} />
       <BackLink fallbackHref={'/pick-game' as Href} />
       <Text style={styles.topHint}>{TOTAL_GAME_ROUNDS} rounds either way. Headcount comes next.</Text>
 
@@ -34,12 +44,15 @@ export default function GameModeScreen() {
       </View>
 
       <View style={[styles.card, styles.cardMayhem]}>
-        <Text style={styles.cardTitle}>Mayhem</Text>
+        <Text style={styles.cardTitle}>Mayhem{sessionPassActive ? '' : ' 🔒'}</Text>
         <Text style={styles.cardBody}>
           For crews who already know the drill: random languages every round, random phrases — never shorter than four
           words.
         </Text>
-        <PrimaryButton title="Play Mayhem" onPress={() => choose('mayhem')} />
+        <PrimaryButton
+          title={sessionPassActive ? 'Play Mayhem' : 'Unlock Mayhem'}
+          onPress={() => choose('mayhem')}
+        />
       </View>
     </Screen>
   );
