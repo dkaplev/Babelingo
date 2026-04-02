@@ -15,16 +15,10 @@ type Props = {
   busy?: boolean;
 };
 
-export function testerCodeUiEnabled(): boolean {
-  return Boolean(getPaywallBackdoorCode()) || devSessionPassUnlockEnabled();
-}
-
 export function TesterCodeEntry({ onCodeApplied, variant = 'standalone', busy = false }: Props) {
   const [testerCode, setTesterCode] = useState('');
   const backdoor = getPaywallBackdoorCode();
   const dev = devSessionPassUnlockEnabled();
-
-  if (!backdoor && !dev) return null;
 
   const apply = () => {
     const t = testerCode.trim();
@@ -40,14 +34,14 @@ export function TesterCodeEntry({ onCodeApplied, variant = 'standalone', busy = 
 
   return (
     <View style={styles.wrap}>
+      <Text style={styles.title}>
+        {variant === 'paywall' ? 'Tester code' : 'Enter tester code'}
+      </Text>
       {backdoor ? (
         <>
-          <Text style={styles.title}>
-            {variant === 'paywall' ? 'Tester code' : 'Enter tester code'}
-          </Text>
           <Text style={styles.sub}>
             {variant === 'standalone'
-              ? 'You can also open the paywall (locked game or 4th player) and enter it there.'
+              ? 'Same code works on the paywall (locked game or fourth player).'
               : 'Unlocks this session’s full modes and player limits on this device.'}
           </Text>
           <TextInput
@@ -68,9 +62,16 @@ export function TesterCodeEntry({ onCodeApplied, variant = 'standalone', busy = 
           </Pressable>
         </>
       ) : null}
-      {dev && !backdoor ? (
+      {!backdoor && dev ? (
         <Text style={styles.devNote}>
           Dev build: open any paywall (locked mode or fourth player) and tap Unlock — no purchase required.
+        </Text>
+      ) : null}
+      {!backdoor && !dev ? (
+        <Text style={styles.missingNote}>
+          This install does not include an embedded tester code. Add EXPO_PUBLIC_PAYWALL_BACKDOOR_CODE to your EAS
+          build environment (same value you share with testers), create a new binary, then enter the code here or on the
+          paywall. Purchases use the Unlock button below.
         </Text>
       ) : null}
       {dev && backdoor ? (
@@ -122,6 +123,12 @@ const styles = StyleSheet.create({
     fontFamily: Font.body,
     fontSize: 12,
     lineHeight: 17,
+    color: Colors.party.textMuted,
+  },
+  missingNote: {
+    fontFamily: Font.body,
+    fontSize: 12,
+    lineHeight: 18,
     color: Colors.party.textMuted,
   },
 });

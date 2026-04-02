@@ -1,5 +1,5 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { TesterCodeEntry, testerCodeUiEnabled } from '@/components/TesterCodeEntry';
+import { TesterCodeEntry } from '@/components/TesterCodeEntry';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import {
@@ -13,14 +13,17 @@ import {
   devSessionPassUnlockEnabled,
   grantSessionPassForDevTesting,
   purchaseSessionPassWithReceipt,
+  showTesterUi,
 } from '@/lib/purchases';
 import { useSessionEntitlementsStore } from '@/lib/sessionEntitlementsStore';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -36,7 +39,7 @@ type Props = {
 export function PaywallModal({ visible, triggerPoint, onClose, onUnlocked }: Props) {
   const paywallVariant = useSessionEntitlementsStore((s) => s.paywallVariant);
   const [busy, setBusy] = useState(false);
-  const showTester = testerCodeUiEnabled();
+  const showTester = showTesterUi();
 
   useEffect(() => {
     if (!visible) setBusy(false);
@@ -80,46 +83,52 @@ export function PaywallModal({ visible, triggerPoint, onClose, onUnlocked }: Pro
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onMaybeLater}>
       <Pressable style={styles.backdrop} onPress={onMaybeLater}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.headline}>Unlock the full chaos</Text>
-          {showTester ? (
-            <View style={styles.testerSection}>
-              <TesterCodeEntry
-                variant="paywall"
-                busy={busy}
-                onCodeApplied={() => {
-                  onUnlocked?.();
-                  onClose();
-                }}
-              />
-            </View>
-          ) : null}
-          <Text style={styles.check}>✓ All 3 game modes</Text>
-          <Text style={styles.check}>✓ Mayhem vibe</Text>
-          <Text style={styles.check}>✓ Up to 8 players + full 7 rounds (this session)</Text>
-          <Text style={styles.price}>$3.99 for this session</Text>
-          <Text style={styles.split}>Split 4 ways? That&apos;s less than a queueing drink.</Text>
-          <Text style={styles.legal}>
-            Payment charged to your Apple ID account at confirmation. Purchases are validated on Babelingo servers.
-          </Text>
-          <PrimaryButton
-            title={busy ? 'Working…' : 'Unlock now — $3.99'}
-            onPress={() => void onUnlock()}
-            disabled={busy}
-          />
-          {busy ? <ActivityIndicator color={Colors.party.accent} style={{ marginTop: 12 }} /> : null}
-          <Pressable onPress={onMaybeLater} style={styles.secondaryWrap}>
-            <Text style={styles.secondary}>Maybe later</Text>
-          </Pressable>
-          <Pressable
-            onPress={() =>
-              Alert.alert(
-                'Restore purchases',
-                'Connects to Apple with a receipt from this device. Requires a TestFlight or App Store build with in-app purchase configured.',
-              )
-            }>
-            <Text style={styles.restore}>Restore purchases</Text>
-          </Pressable>
-          <Text style={styles.variantTag}>variant: {paywallVariant}</Text>
+          <ScrollView
+            style={{ maxHeight: Dimensions.get('window').height * 0.88 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}>
+            <Text style={styles.headline}>Unlock the full chaos</Text>
+            {showTester ? (
+              <View style={styles.testerSection}>
+                <TesterCodeEntry
+                  variant="paywall"
+                  busy={busy}
+                  onCodeApplied={() => {
+                    onUnlocked?.();
+                    onClose();
+                  }}
+                />
+              </View>
+            ) : null}
+            <Text style={styles.check}>✓ All 3 game modes</Text>
+            <Text style={styles.check}>✓ Mayhem vibe</Text>
+            <Text style={styles.check}>✓ Up to 8 players + full 7 rounds (this session)</Text>
+            <Text style={styles.price}>$3.99 for this session</Text>
+            <Text style={styles.split}>Split 4 ways? That&apos;s less than a queueing drink.</Text>
+            <Text style={styles.legal}>
+              Payment charged to your Apple ID account at confirmation. Purchases are validated on Babelingo servers.
+            </Text>
+            <PrimaryButton
+              title={busy ? 'Working…' : 'Unlock now — $3.99'}
+              onPress={() => void onUnlock()}
+              disabled={busy}
+            />
+            {busy ? <ActivityIndicator color={Colors.party.accent} style={{ marginTop: 12 }} /> : null}
+            <Pressable onPress={onMaybeLater} style={styles.secondaryWrap}>
+              <Text style={styles.secondary}>Maybe later</Text>
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                Alert.alert(
+                  'Restore purchases',
+                  'Connects to Apple with a receipt from this device. Requires a TestFlight or App Store build with in-app purchase configured.',
+                )
+              }>
+              <Text style={styles.restore}>Restore purchases</Text>
+            </Pressable>
+            <Text style={styles.variantTag}>variant: {paywallVariant}</Text>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>

@@ -79,3 +79,12 @@ export function tryPaywallBackdoorCode(input: string): boolean {
   grantSessionPassForDevTesting();
   return true;
 }
+
+/** Hide home + paywall tester entry (e.g. public App Store). Default: show so TestFlight testers always see where to enter a code. */
+export function hideTesterUi(): boolean {
+  return process.env.EXPO_PUBLIC_HIDE_TESTER_UI === '1' || process.env.EXPO_PUBLIC_HIDE_TESTER_UI === 'true';
+}
+
+export function showTesterUi(): boolean {
+  return !hideTesterUi();
+}

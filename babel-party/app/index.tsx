@@ -1,10 +1,11 @@
 import { ArcadeMenuPrompt } from '@/components/ArcadeMenuPrompt';
 import { PressStartPrompt } from '@/components/PressStartPrompt';
 import { Screen } from '@/components/Screen';
-import { TesterCodeEntry, testerCodeUiEnabled } from '@/components/TesterCodeEntry';
+import { TesterCodeEntry } from '@/components/TesterCodeEntry';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
+import { showTesterUi } from '@/lib/purchases';
 import { useGameStore } from '@/lib/gameStore';
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
@@ -20,7 +21,7 @@ export default function HomeScreen() {
   const logoWidth = Math.min(windowWidth - 44, 400);
   const logoHeight = logoWidth / LOGO_ASPECT;
   const [testerOpen, setTesterOpen] = useState(false);
-  const showTesterEntry = testerCodeUiEnabled();
+  const showTesterEntry = showTesterUi();
 
   const startGame = () => {
     resetSession();
@@ -72,8 +73,14 @@ export default function HomeScreen() {
         accessibilityLabel="How it works"
       />
       {showTesterEntry ? (
-        <Pressable onPress={() => setTesterOpen(true)} style={styles.testerLinkWrap} hitSlop={10}>
-          <Text style={styles.testerLink}>Beta / tester code</Text>
+        <Pressable
+          onPress={() => setTesterOpen(true)}
+          style={styles.testerLinkWrap}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Open tester or beta unlock code">
+          <Text style={styles.testerLink}>▸ TESTER / BETA CODE</Text>
+          <Text style={styles.testerLinkSub}>tap to enter session unlock</Text>
         </Pressable>
       ) : null}
       <Text style={styles.copyright}>© PARTY MODULE · NES MODE</Text>
@@ -116,13 +123,19 @@ const styles = StyleSheet.create({
   },
   testerCloseWrap: { alignSelf: 'center', paddingVertical: 8 },
   testerClose: { fontFamily: Font.bodyBold, fontSize: 15, color: Colors.party.textMuted },
-  testerLinkWrap: { alignSelf: 'center', marginTop: 4, marginBottom: 2, paddingVertical: 8 },
+  testerLinkWrap: { alignSelf: 'center', marginTop: 10, marginBottom: 6, paddingVertical: 10, alignItems: 'center' },
   testerLink: {
-    fontFamily: Font.bodyBold,
-    fontSize: 13,
+    fontFamily: Font.title,
+    fontSize: 12,
     color: Colors.party.accent2,
-    textDecorationLine: 'underline',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
+  },
+  testerLinkSub: {
+    fontFamily: Font.body,
+    fontSize: 11,
+    color: Colors.party.textMuted,
+    marginTop: 4,
+    letterSpacing: 0.2,
   },
   homeLead: {
     fontFamily: Font.body,
