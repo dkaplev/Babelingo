@@ -110,6 +110,20 @@ Typical flow:
 2. **Internal / TestFlight / Play internal testing** for friends.
 3. **App Store / Play Store** when you’re ready.
 
+### Store build numbers (iOS `buildNumber`, Android `versionCode`)
+
+- **Apple:** every upload to App Store Connect needs a **new** **CFBundleVersion** (Expo: `expo.ios.buildNumber`). If TestFlight or Transporter says the build number was already used, you **cannot** fix that by re-submitting the same `.ipa` — you must **bump the number and produce a new binary**.
+- **Google Play:** each release needs a higher **`versionCode`** than the last one you uploaded.
+
+**In this repo (`babel-party`):**
+
+| What | How |
+|------|-----|
+| User-facing app version (`1.0.1` → `1.0.2`) | `npm run version:patch` or `version:minor` (updates `app.json` + `package.json`) |
+| Only native counters (typical after “duplicate build”) | From `babel-party`: `npm run build:bump` — increments **both** `expo.ios.buildNumber` and `expo.android.versionCode` by 1 |
+
+`eas.json` **production** has **`"autoIncrement": true`**, so **EAS Build** (cloud or `--local`) can still bump counters at compile time. If your workflow does not write that back into git, run **`build:bump`** before building so the repo matches what you upload, then **commit `app.json`** after you confirm the numbers.
+
 ### TestFlight without EAS cloud queues (local builds)
 
 Free-tier **cloud** EAS builds can sit in a long queue. Use one of these instead.

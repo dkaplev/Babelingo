@@ -5,9 +5,9 @@
  *   patch — bug fixes / technical (1.0.3 → 1.0.4)
  *   minor — product / new features (1.0.3 → 1.1.0)
  *
- * iOS buildNumber / Android versionCode are still auto-incremented by EAS
- * (see eas.json production.autoIncrement). After a local auto-increment build,
- * commit any app.json changes EAS wrote.
+ * Native store counters (iOS buildNumber, Android versionCode): EAS production
+ * uses autoIncrement (eas.json); if ASC rejects a duplicate or you build outside
+ * EAS, run `npm run build:bump` before the next binary.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

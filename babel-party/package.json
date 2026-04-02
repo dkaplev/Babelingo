@@ -15,7 +15,8 @@
     "build:ios:local": "npx eas-cli@latest build --platform ios --profile production --local",
     "prebuild:ios": "expo prebuild --platform ios --clean",
     "version:patch": "node ./scripts/bump-app-version.mjs patch",
-    "version:minor": "node ./scripts/bump-app-version.mjs minor"
+    "version:minor": "node ./scripts/bump-app-version.mjs minor",
+    "build:bump": "node ./scripts/bump-native-build.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/press-start-2p": "^0.4.1",

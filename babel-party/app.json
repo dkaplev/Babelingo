@@ -14,7 +14,7 @@
     },
     "ios": {
       "bundleIdentifier": "party.babelingo.app",
-      "buildNumber": "4",
+      "buildNumber": "6",
       "appleTeamId": "UDP2RKPHCF",
       "supportsTablet": true,
       "infoPlist": {
@@ -24,7 +24,7 @@
     },
     "android": {
       "package": "party.babelingo.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
