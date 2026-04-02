@@ -13,7 +13,7 @@ export function Screen(props: {
   children: ReactNode;
   footer?: ReactNode;
   keyboardAvoiding?: boolean;
-  /** e.g. `Colors.party.logoBackdrop` so the home screen matches `babelingo-title.png`. */
+  /** e.g. `Colors.party.logoBackdrop` so the home screen matches `babelingo-title.jpg`. */
   backdropColor?: string;
   /** Scrim over `NesBackground`; default matches `party.surface`. */
   overlayColor?: string;

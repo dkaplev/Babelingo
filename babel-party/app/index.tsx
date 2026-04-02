@@ -49,7 +49,7 @@ export default function HomeScreen() {
       </Modal>
       <View style={[styles.logoClip, { width: logoWidth, height: logoHeight, alignSelf: 'center' }]}>
         <Image
-          source={require('@/assets/images/babelingo-title.png')}
+          source={require('@/assets/images/babelingo-title.jpg')}
           style={[
             styles.logo,
             {

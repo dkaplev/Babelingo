@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Samples flat background from babelingo-title.png (may be JPEG data with .png extension).
+ * Samples flat background from babelingo-title.jpg (run after replacing title art).
  */
 import fs from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -9,7 +9,7 @@ import { decode as decodeJpeg } from 'jpeg-js';
 import { PNG } from 'pngjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const imgPath = join(root, 'assets/images/babelingo-title.png');
+const imgPath = join(root, 'assets/images/babelingo-title.jpg');
 const buf = fs.readFileSync(imgPath);
 
 let width;

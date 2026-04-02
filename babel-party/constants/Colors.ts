@@ -1,7 +1,7 @@
 /** Neon Retro — party game night (magenta / cyan / orange on dark navy). */
 const navy = '#1A1B4B';
 /**
- * Sampled from `assets/images/babelingo-title.png` (top-left opaque region).
+ * Sampled from `assets/images/babelingo-title.jpg` (top-left opaque region).
  * Run `npm run logo:sample-bg` after replacing title art.
  */
 const logoBackdrop = '#141947';
