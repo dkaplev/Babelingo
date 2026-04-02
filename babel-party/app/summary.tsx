@@ -1,4 +1,4 @@
-import { MomentSharePanel } from '@/components/MomentSharePanel';
+import { ScoreboardRecapShare } from '@/components/ScoreboardRecapShare';
 import { PaywallModal } from '@/components/PaywallModal';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
@@ -8,6 +8,7 @@ import { trackEvent, trackSessionCompleted } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
 import { saveLastLobbyPlayerNames } from '@/lib/recentPlayers';
 import { useSessionEntitlementsStore } from '@/lib/sessionEntitlementsStore';
+import type { PosterThemeId } from '@/lib/posterThemes';
 import { computeTeamTotals } from '@/lib/teamScores';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -21,6 +22,10 @@ export default function SummaryScreen() {
   const settings = useGameStore((s) => s.settings);
   const sessionPassActive = useSessionEntitlementsStore((s) => s.sessionPassActive);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [recapThemeId, setRecapThemeId] = useState<PosterThemeId>(() => {
+    const pool = ['retro', 'neon', 'minimal'] as PosterThemeId[];
+    return pool[Math.floor(Math.random() * pool.length)]!;
+  });
 
   const winner = useMemo(() => [...players].sort((a, b) => b.totalScore - a.totalScore)[0], [players]);
   const teamTotals = useMemo(() => computeTeamTotals(players), [players]);
@@ -133,15 +138,13 @@ export default function SummaryScreen() {
         </View>
       ) : null}
 
-      {funniest ? (
-        <MomentSharePanel
-          context="summary"
-          payload={{
-            mangled: funniest.reverseEnglish,
-            originalEnglish: funniest.phraseOriginal,
-            languageLabel: funniest.languageLabel,
-            playerName: funniest.playerName,
-          }}
+      {results.length > 0 ? (
+        <ScoreboardRecapShare
+          mode="session"
+          results={results}
+          themeId={recapThemeId}
+          onThemeChange={setRecapThemeId}
+          appGame={settings.appGame}
         />
       ) : null}
 

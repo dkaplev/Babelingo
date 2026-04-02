@@ -27,8 +27,8 @@ export function MomentShareGraphic({ template, payload }: Props) {
             “{payload.mangled}”
           </Text>
         </View>
-        {payload.originalEnglish && template.id === 'conspiracy' ? (
-          <Text style={styles.original} numberOfLines={3}>
+        {payload.originalEnglish ? (
+          <Text style={styles.original} numberOfLines={4}>
             Original: {payload.originalEnglish}
           </Text>
         ) : null}

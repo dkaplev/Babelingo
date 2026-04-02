@@ -16,7 +16,8 @@
     "prebuild:ios": "expo prebuild --platform ios --clean",
     "version:patch": "node ./scripts/bump-app-version.mjs patch",
     "version:minor": "node ./scripts/bump-app-version.mjs minor",
-    "build:bump": "node ./scripts/bump-native-build.mjs"
+    "build:bump": "node ./scripts/bump-native-build.mjs",
+    "logo:sample-bg": "node ./scripts/sample-title-png-bg.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/press-start-2p": "^0.4.1",
@@ -51,6 +52,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "jpeg-js": "^0.4.4",
+    "pngjs": "^7.0.0",
     "typescript": "~5.9.2"
   },
   "private": true

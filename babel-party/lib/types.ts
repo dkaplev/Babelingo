@@ -76,4 +76,6 @@ export type TurnResult = {
   chaosScore?: number;
   /** Player skipped recording (F-06). */
   turnSkipped?: boolean;
+  /** Babel Phone solo: full fake telephone chain for scoreboard/reveal (seed + real hop + synthetic hops). */
+  babelDisplayChain?: string[];
 };

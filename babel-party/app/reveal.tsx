@@ -1,5 +1,4 @@
 import { ChaosCounter } from '@/components/ChaosCounter';
-import { MomentSharePanel } from '@/components/MomentSharePanel';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
@@ -177,15 +176,6 @@ export default function RevealScreen() {
         </Text>
       </View>
 
-      <MomentSharePanel
-        context="reveal"
-        payload={{
-          mangled: normalizeTranslationText(lastResult.reverseEnglish),
-          originalEnglish: lastResult.phraseOriginal,
-          languageLabel: lastResult.languageLabel,
-          playerName: lastResult.playerName,
-        }}
-      />
     </Screen>
   );
 }

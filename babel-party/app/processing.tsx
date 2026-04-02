@@ -5,6 +5,7 @@ import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { currentPlayer, useGameStore } from '@/lib/gameStore';
 import { languageByCode } from '@/lib/languages';
+import { buildSoloBabelDisplayChain } from '@/lib/babelSoloChain';
 import { runEchoPipeline, runReversePipeline } from '@/lib/pipeline';
 import type { TurnResult } from '@/lib/types';
 import { useRouter } from 'expo-router';
@@ -73,6 +74,15 @@ export default function ProcessingScreen() {
 
       const totalTurnScore = (out.closenessScore + out.languageBonus) as number;
 
+      let babelDisplayChain: string[] | undefined;
+      if (appGame === 'babel_phone' && store.players.length === 1 && !out.timedOut) {
+        try {
+          babelDisplayChain = await buildSoloBabelDisplayChain(phrase.text, out.reverseEnglish, 4);
+        } catch {
+          babelDisplayChain = undefined;
+        }
+      }
+
       const result: TurnResult = {
         roundNumber: store.currentRound,
         turnOrderInRound: store.turnIndex,
@@ -93,6 +103,7 @@ export default function ProcessingScreen() {
         usedMockPipeline: out.usedMockPipeline,
         sttMockReason: out.sttMockReason,
         chaosScore: out.chaosScore,
+        babelDisplayChain,
       };
 
       useGameStore.getState().commitTurnResult(result);

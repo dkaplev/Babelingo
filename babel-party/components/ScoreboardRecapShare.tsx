@@ -4,14 +4,24 @@ import { Font } from '@/constants/Typography';
 import { trackSharePosterTapped } from '@/lib/analytics';
 import { normalizeTranslationText } from '@/lib/normalizeTranslation';
 import { POSTER_THEMES, type PosterTheme, type PosterThemeId } from '@/lib/posterThemes';
-import type { TurnResult } from '@/lib/types';
+import type { AppGameId, TurnResult } from '@/lib/types';
 import * as Sharing from 'expo-sharing';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
-function bestRecapForRound(results: TurnResult[], round: number): TurnResult | null {
-  const rs = results.filter((r) => r.roundNumber === round);
+function pickHighlight(
+  results: TurnResult[],
+  mode: 'round' | 'session',
+  currentRound?: number,
+): TurnResult | null {
+  const ok = results.filter((r) => !r.turnSkipped);
+  if (!ok.length) return null;
+  if (mode === 'session') {
+    return [...ok].sort((a, b) => (b.chaosScore ?? 0) - (a.chaosScore ?? 0))[0] ?? null;
+  }
+  if (currentRound == null) return null;
+  const rs = ok.filter((r) => r.roundNumber === currentRound);
   if (!rs.length) return null;
   return [...rs].sort((a, b) => (b.chaosScore ?? 0) - (a.chaosScore ?? 0))[0] ?? null;
 }
@@ -22,66 +32,77 @@ function themeById(id: PosterThemeId): PosterTheme {
 
 type Props = {
   results: TurnResult[];
-  currentRound: number;
+  mode: 'round' | 'session';
+  currentRound?: number;
   themeId: PosterThemeId;
   onThemeChange: (id: PosterThemeId) => void;
+  appGame: AppGameId;
 };
 
-export function ScoreboardRecapShare({ results, currentRound, themeId, onThemeChange }: Props) {
-  const highlight = bestRecapForRound(results, currentRound);
+export function ScoreboardRecapShare({
+  results,
+  mode,
+  currentRound,
+  themeId,
+  onThemeChange,
+  appGame,
+}: Props) {
+  const highlight = pickHighlight(results, mode, currentRound);
   const posterRef = useRef<View>(null);
-  const autoShared = useRef(false);
 
-  const sharePoster = useCallback(
-    async (source: 'auto' | 'button') => {
-      if (!highlight || highlight.turnSkipped) return;
-      const chaos = highlight.chaosScore ?? 0;
-      const caption = `Chaos ${chaos} on Babelingo — can you beat this? #Babelingo #BabelChaos`;
-      if (source === 'button') trackSharePosterTapped(chaos, themeId);
-      try {
-        await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-        const ref = posterRef.current;
-        if (!ref) return;
-        const uri = await captureRef(ref, {
-          format: 'png',
-          quality: 0.92,
-          width: SHARE_POSTER_WIDTH,
-          height: SHARE_POSTER_HEIGHT,
-          result: 'tmpfile',
-        });
-        const fileUri =
-          Platform.OS === 'android' && uri && !uri.startsWith('file') ? `file://${uri}` : uri;
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(fileUri, { mimeType: 'image/png', dialogTitle: caption });
-        } else {
-          await Share.share({ message: caption, url: fileUri });
-        }
-      } catch {
-        await Share.share({
-          message: `${normalizeTranslationText(highlight.reverseEnglish)}\n\n${caption}`,
-        });
+  const sharePoster = useCallback(async () => {
+    if (!highlight || highlight.turnSkipped) return;
+    const chaos = highlight.chaosScore ?? 0;
+    const caption = `Chaos ${chaos} on Babelingo — can you beat this? #Babelingo #BabelChaos`;
+    trackSharePosterTapped(chaos, themeId);
+    try {
+      await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+      const ref = posterRef.current;
+      if (!ref) return;
+      const uri = await captureRef(ref, {
+        format: 'png',
+        quality: 0.92,
+        width: SHARE_POSTER_WIDTH,
+        height: SHARE_POSTER_HEIGHT,
+        result: 'tmpfile',
+      });
+      const fileUri =
+        Platform.OS === 'android' && uri && !uri.startsWith('file') ? `file://${uri}` : uri;
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: 'image/png', dialogTitle: caption });
+      } else {
+        await Share.share({ message: caption, url: fileUri });
       }
-    },
-    [highlight, themeId],
-  );
-
-  useEffect(() => {
-    if (!highlight || highlight.turnSkipped || autoShared.current) return;
-    autoShared.current = true;
-    const t = setTimeout(() => void sharePoster('auto'), 2200);
-    return () => clearTimeout(t);
-  }, [highlight, sharePoster]);
+    } catch {
+      await Share.share({
+        message: `${normalizeTranslationText(highlight.reverseEnglish)}\n\n${caption}`,
+      });
+    }
+  }, [highlight, themeId]);
 
   if (!highlight || highlight.turnSkipped) return null;
 
-  const foreign = normalizeTranslationText(highlight.translatedText || '· · ·');
-  const english = normalizeTranslationText(highlight.reverseEnglish);
+  const foreignForPoster =
+    appGame === 'reverse_audio'
+      ? normalizeTranslationText(highlight.phraseOriginal)
+      : normalizeTranslationText(highlight.translatedText?.trim() || '· · ·');
+
+  const englishLine = normalizeTranslationText(highlight.reverseEnglish);
+
+  const langLine =
+    appGame === 'reverse_audio'
+      ? 'ORIGINAL LINE'
+      : highlight.languageLabel || 'FOREIGN CLUE';
+
   const theme = themeById(themeId);
+  const titleCopy = mode === 'session' ? 'Session chaos recap' : 'Recap reel';
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>Recap reel</Text>
-      <Text style={styles.hint}>Pick a style — we&apos;ll grab a 9:16 poster for your story.</Text>
+      <Text style={styles.title}>{titleCopy}</Text>
+      <Text style={styles.hint}>
+        Share once when the party wraps — pick a poster style for stories or group chats.
+      </Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
         {POSTER_THEMES.map((t) => (
           <Pressable
@@ -92,7 +113,7 @@ export function ScoreboardRecapShare({ results, currentRound, themeId, onThemeCh
           </Pressable>
         ))}
       </ScrollView>
-      <Pressable style={styles.shareBtn} onPress={() => void sharePoster('button')}>
+      <Pressable style={styles.shareBtn} onPress={() => void sharePoster()}>
         <Text style={styles.shareBtnText}>Share recap</Text>
       </Pressable>
 
@@ -100,11 +121,11 @@ export function ScoreboardRecapShare({ results, currentRound, themeId, onThemeCh
         <View ref={posterRef} collapsable={false}>
           <SharePoster
             theme={theme}
-            foreignPhrase={foreign}
-            englishMangled={english}
+            foreignPhrase={foreignForPoster}
+            englishMangled={englishLine}
             playerName={highlight.playerName}
             chaosScore={highlight.chaosScore ?? 0}
-            languageLabel={highlight.languageLabel}
+            languageLabel={langLine}
           />
         </View>
       </View>

@@ -1,5 +1,4 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { ScoreboardRecapShare } from '@/components/ScoreboardRecapShare';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
@@ -12,9 +11,8 @@ import {
   topScorersInRound,
 } from '@/lib/sessionHighlights';
 import { computeTeamTotals } from '@/lib/teamScores';
-import type { PosterThemeId } from '@/lib/posterThemes';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function ScoreboardScreen() {
@@ -24,11 +22,6 @@ export default function ScoreboardScreen() {
   const currentRound = useGameStore((s) => s.currentRound);
   const results = useGameStore((s) => s.results);
   const goScoreboardToNext = useGameStore((s) => s.goScoreboardToNext);
-
-  const [recapThemeId, setRecapThemeId] = useState<PosterThemeId>(() => {
-    const pool = ['retro', 'neon', 'minimal'] as PosterThemeId[];
-    return pool[Math.floor(Math.random() * pool.length)]!;
-  });
 
   const sorted = [...players].sort((a, b) => b.totalScore - a.totalScore);
   const sessionHighChaos = useMemo(
@@ -117,13 +110,6 @@ export default function ScoreboardScreen() {
           <Text style={styles.chaosSessionNum}>{sessionHighChaos}</Text>
         </View>
       ) : null}
-
-      <ScoreboardRecapShare
-        results={results}
-        currentRound={currentRound}
-        themeId={recapThemeId}
-        onThemeChange={setRecapThemeId}
-      />
 
       {settings.teamsEnabled && teamTotals ? (
         <View style={styles.teamBanner}>

@@ -33,6 +33,8 @@ export function babelEnglishChainForRound(results: TurnResult[], roundNumber: nu
     (a, b) => a.turnOrderInRound - b.turnOrderInRound,
   );
   if (inRound.length === 0) return [];
+  const withDisplay = inRound.find((r) => r.babelDisplayChain && r.babelDisplayChain.length > 1);
+  if (withDisplay?.babelDisplayChain) return withDisplay.babelDisplayChain;
   const chain: string[] = [inRound[0]!.phraseOriginal];
   for (const r of inRound) chain.push(r.reverseEnglish.trim());
   return chain;

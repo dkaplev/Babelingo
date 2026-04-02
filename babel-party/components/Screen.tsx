@@ -1,6 +1,7 @@
 import { usePartyPalette } from '@/components/GameThemeProvider';
 import { NesBackground } from '@/components/NesBackground';
 import { Font } from '@/constants/Typography';
+import { getPartyPalette } from '@/lib/partyPalette';
 import { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +19,8 @@ export function Screen(props: {
   overlayColor?: string;
   /** `flat` = solid backdrop only (matches logo PNG); `arcade` = stars + scrim. */
   decoration?: 'arcade' | 'flat';
+  /** Use default Echo palette for titles/footer instead of the active game (e.g. pick-game after Reverse). */
+  neutralChrome?: boolean;
 }) {
   const {
     title,
@@ -29,8 +32,10 @@ export function Screen(props: {
     backdropColor,
     overlayColor,
     decoration = 'arcade',
+    neutralChrome = false,
   } = props;
-  const party = usePartyPalette();
+  const ctxParty = usePartyPalette();
+  const party = neutralChrome ? getPartyPalette('echo_translator') : ctxParty;
   const rootBg = backdropColor ?? party.surface;
   const scrim = overlayColor ?? 'rgba(26, 27, 75, 0.88)';
   const showArcade = decoration === 'arcade';

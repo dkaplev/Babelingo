@@ -1,7 +1,10 @@
 /** Neon Retro — party game night (magenta / cyan / orange on dark navy). */
 const navy = '#1A1B4B';
-/** Same as `navy` — `babelingo-title.png` is exported on this flat fill so the home screen must match. */
-const logoBackdrop = navy;
+/**
+ * Sampled from `assets/images/babelingo-title.png` (top-left opaque region).
+ * Run `npm run logo:sample-bg` after replacing title art.
+ */
+const logoBackdrop = '#141947';
 const navyMid = '#24285F';
 const navyCard = '#2A2E72';
 const magenta = '#D527B7';
@@ -20,8 +23,8 @@ export default {
     surface: navy,
     /** Home / logo strip — matches PNG background */
     logoBackdrop,
-    /** Dim layer over NesBackground when using logoBackdrop (navy @ 88%). */
-    logoBackdropOverlay: 'rgba(26, 27, 75, 0.88)',
+    /** Dim layer over NesBackground when using logoBackdrop (~logoBackdrop @ 88%). */
+    logoBackdropOverlay: 'rgba(20, 25, 71, 0.88)',
     surface2: navyMid,
     card: navyCard,
     text: '#F4F6FF',

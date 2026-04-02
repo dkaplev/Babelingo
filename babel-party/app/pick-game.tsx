@@ -51,7 +51,10 @@ export default function PickGameScreen() {
   };
 
   return (
-    <Screen title="Pick a game" subtitle="Three modes — tap a card to continue.">
+    <Screen
+      title="Pick a game"
+      subtitle="Three modes — tap a card to continue."
+      neutralChrome>
       <PaywallModal visible={paywallOpen} triggerPoint={paywallTrigger} onClose={() => setPaywallOpen(false)} />
       <BackLink fallbackHref="/" />
       <View style={styles.stack}>
