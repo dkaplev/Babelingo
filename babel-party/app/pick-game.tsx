@@ -17,17 +17,17 @@ const GAMES: { id: AppGameId; title: string; body: string }[] = [
   {
     id: 'echo_translator',
     title: 'Echo Translator',
-    body: 'Foreign audio → mimic → scored. Listen-speed slider on each turn. Same line each round (solo or party), revealed at the end.',
+    body: 'Hear a wild foreign line, throw your best mimic, then watch the scoreboard roast how close you got.',
   },
   {
     id: 'babel_phone',
     title: 'Babel Phone',
-    body: 'Each turn you hear a real foreign language; English mutates only on the chain between turns. Solo = one hop; group = full telephone.',
+    body: 'Each earful is a real language; English only mutates through the chain of recordings — solo is one hop, party is full chaos.',
   },
   {
     id: 'reverse_audio',
     title: 'Reverse Audio',
-    body: '4–5 word lines, unique per player each round. Backward clue (slider) → mimic → clip reversed → say it. English only.',
+    body: 'Tiny English lines played backward, then reversed again after you mimic — say the real phrase before the room loses it.',
   },
 ];
 

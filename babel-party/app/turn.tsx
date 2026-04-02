@@ -394,15 +394,6 @@ function EchoBabelTurnScreen() {
         </View>
       ) : null}
 
-      {!needsTranslationFix && !loadingTts && translationSource === 'mymemory_fallback' ? (
-        <Text style={styles.hint}>
-          Your server did not return a translation; using the public fallback translator (rate limits may apply).
-        </Text>
-      ) : null}
-      {!needsTranslationFix && !loadingTts && getPipelineBaseUrl() && !forceDevicePhraseTts() ? (
-        <Text style={styles.hint}>Foreign phrase plays from your server when possible (loudspeaker-friendly).</Text>
-      ) : null}
-
       {loadingTts ? (
         <ActivityIndicator color={party.accent} style={{ marginVertical: 24 }} />
       ) : !needsTranslationFix ? (
@@ -491,10 +482,6 @@ function ReverseTurnScreen() {
   const player = useGameStore((s) => currentPlayer(s));
   const players = useGameStore((s) => s.players);
   const solo = players.length === 1;
-  const playbackSpeedLabel = clampPlaybackSpeed(
-    useGameStore((s) => s.settings.playbackSpeed ?? PLAYBACK_SPEED_DEFAULT),
-  );
-
   const hasListenedOnce = listensRemaining < MAX_PHRASE_PLAYS;
   const hasFinalRecording = Boolean(pendingRecordingUri);
   const canStartRecord =
@@ -665,8 +652,8 @@ function ReverseTurnScreen() {
         title={solo ? 'Your turn' : 'Pass the phone'}
         subtitle={
           solo
-            ? `${player.name}, solo run — the answer stays hidden until the scoreboard. Use the speed slider on the next screen for the backward clue.`
-            : `${player.name} is up. Each player has a different short line this round — nothing is revealed until the scoreboard. Backward audio is on the next screen.`
+            ? `${player.name}, solo run — the answer stays hidden until the scoreboard. Next: backward clue, then your turn to mimic.`
+            : `${player.name} is up. Each player has a different short line this round — nothing is revealed until the scoreboard. Next: backward audio on the following screen.`
         }
         footer={
           <PrimaryButton
@@ -679,8 +666,8 @@ function ReverseTurnScreen() {
         <View style={[styles.card, { borderColor: party.neonStroke }]}>
           <Text style={styles.whisper}>Secret until scoreboard</Text>
           <Text style={styles.en}>
-            Clues are only 4–5 words but brutal backward. Speed follows the slider on the next screen. After your mimic,
-            your clip plays reversed at normal speed before you say the real line.
+            Clues are only 4–5 words but brutal backward. After your mimic, your clip plays reversed at normal speed
+            before you say the real line.
           </Text>
         </View>
       </Screen>
@@ -708,7 +695,7 @@ function ReverseTurnScreen() {
       title={`${player.name} · Reverse Audio`}
       subtitle={
         reverseStep === 1
-          ? 'Step 1 of 2 — backward clue (slider), then mimic'
+          ? 'Step 1 of 2 — backward clue, then mimic'
           : 'Step 2 of 2 — your clip backward, then say the line'
       }
       footer={
@@ -736,7 +723,7 @@ function ReverseTurnScreen() {
         </View>
       }>
       {menuRow}
-      <PlaybackSpeedSlider hint="Step 1: backward clue is time-stretched on the phone (native) or slowed in synthesis (web). Step 2 stays normal speed." />
+      <PlaybackSpeedSlider />
       {micDenied ? (
         <RecordingErrorBanner message="Microphone is off — enable it in Settings, or skip this turn so the party keeps moving." />
       ) : null}
@@ -762,13 +749,13 @@ function ReverseTurnScreen() {
             ? listensRemaining <= 0
               ? 'Record your backward mimic when ready.'
               : hasListenedOnce
-                ? `Replay backward clue (${listensRemaining} left, ${playbackSpeedLabel.toFixed(2)}× each) or record your mimic.`
-                : `Backward clue plays at ${playbackSpeedLabel.toFixed(2)}× (change with slider) — then record your mimic.`
+                ? `Replay backward clue (${listensRemaining} left) or record your mimic.`
+                : 'Listen to the backward clue — then record your mimic.'
             : listensRemaining <= 0
               ? 'Record the real phrase when ready.'
               : hasListenedOnce
-                ? `Replay your clip reversed at normal speed (${listensRemaining} left) or record the answer.`
-                : 'Hear your attempt reversed at normal speed, then record the real phrase.'
+                ? `Replay your clip reversed (${listensRemaining} left) or record the answer.`
+                : 'Hear your attempt reversed, then record the real phrase.'
         }
       />
 

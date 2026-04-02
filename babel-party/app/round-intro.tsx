@@ -111,8 +111,8 @@ export default function RoundIntroScreen() {
                 ① Very short English line (4–5 words) each round — text stays hidden until the scoreboard.
               </Text>
               <Text style={styles.rule}>
-                ② Use the listen-speed slider for the backward clue; after your mimic, your clip plays reversed at normal
-                speed — then record the real phrase.
+                ② Hear the backward clue, mimic it, then hear your clip reversed the right way round — record the real
+                phrase.
               </Text>
               <Text style={styles.rule}>
                 ③ Arcade practice: beat your last closeness score, or switch to multi-player when friends arrive.
@@ -135,9 +135,7 @@ export default function RoundIntroScreen() {
                 ① One turn per round: foreign audio only, then your recording — the answer phrase unlocks at the
                 scoreboard.
               </Text>
-              <Text style={styles.rule}>
-                ② Slow down or speed up the foreign clip with the listen-speed slider on your turn.
-              </Text>
+              <Text style={styles.rule}>② Replay the foreign clip if you need another listen — then record your mimic.</Text>
               <Text style={styles.rule}>③ Chase higher closeness scores across rounds or use it as quiet rehearsal.</Text>
               <Text style={styles.rule}>
                 ④ Go back to create-room and use the group player count when you want pass-the-phone chaos.
@@ -150,11 +148,10 @@ export default function RoundIntroScreen() {
                 next turn.
               </Text>
               <Text style={styles.rule}>
-                ② Pass the phone — backward clue speed is set with the slider; mimic, hear your clip reversed at normal
-                speed, then record the real phrase.
+                ② Pass the phone — backward clue, mimic, hear your clip reversed at normal speed, then record the real
+                phrase.
               </Text>
-              <Text style={styles.rule}>③ Pipeline URL + Google key on the server required for reversed playback.</Text>
-              <Text style={styles.rule}>④ All answers show on the scoreboard after the round.</Text>
+              <Text style={styles.rule}>③ All answers show on the scoreboard after the round.</Text>
             </>
           ) : appGame === 'babel_phone' ? (
             <>
@@ -164,16 +161,14 @@ export default function RoundIntroScreen() {
               </Text>
               <Text style={styles.rule}>
                 ② Each turn the next English line is whatever came back from the last recording — telephone through
-                languages. Adjust phrase speed with the slider on each turn if you like.
+                languages.
               </Text>
               <Text style={styles.rule}>③ After the round, the scoreboard shows the full English mutation chain.</Text>
             </>
           ) : (
             <>
               <Text style={styles.rule}>① Pass the phone — only the player hears the foreign audio clue.</Text>
-              <Text style={styles.rule}>
-                ② Use the listen-speed slider if phrases feel too fast; then play, mimic, record, submit.
-              </Text>
+              <Text style={styles.rule}>② Play the clue, mimic, record, submit — replay the phrase if you need another listen.</Text>
               <Text style={styles.rule}>③ The shared English line is revealed for the room after the whole round.</Text>
             </>
           )}

@@ -30,7 +30,7 @@ const BABEL: Slide[] = [
 ];
 
 const REVERSE: Slide[] = [
-  { title: 'Listen to the phrase', body: 'Backward audio clue — use the speed slider if you want.', emoji: '⏪' },
+  { title: 'Listen to the phrase', body: 'Backward audio clue — weird on purpose, funny on purpose.', emoji: '⏪' },
   { title: 'Mimic what you hear', body: 'Record your backward guess, then hear it reversed.', emoji: '🎙️' },
   { title: 'See what it became', body: 'Say the real short line — scoreboard shows everyone’s answers.', emoji: '✨' },
 ];

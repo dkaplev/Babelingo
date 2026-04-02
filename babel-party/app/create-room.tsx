@@ -57,7 +57,7 @@ function soloCardCopy(appGame: AppGameId): { title: string; body: string } {
   if (appGame === 'reverse_audio') {
     return {
       title: 'Solo · Reverse Audio',
-      body: 'Each round is a new very short line (4–5 words). Set backward clue speed with the slider, mimic, hear your clip reversed at normal speed, and say the line. Chase a better score or warm up before a group game.',
+      body: 'New bite-sized line every round: backward clue, your mimic, hear it flipped right-way-round, then nail the phrase. Beat your last score or warm up before friends arrive.',
     };
   }
   if (appGame === 'babel_phone') {
