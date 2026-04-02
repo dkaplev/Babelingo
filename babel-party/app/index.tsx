@@ -30,15 +30,8 @@ export default function HomeScreen() {
     router.push('/how-it-works');
   };
 
-  const tryDemo = () => {
-    trackEvent('tap_try_demo_home');
-    router.push('/demo' as Href);
-  };
-
   return (
-    <Screen
-      backdropColor={Colors.party.logoBackdrop}
-      overlayColor={Colors.party.logoBackdropOverlay}>
+    <Screen decoration="flat" backdropColor={Colors.party.logoBackdrop}>
       <View
         style={[
           styles.logoWrap,
@@ -64,7 +57,6 @@ export default function HomeScreen() {
         Hear a wild phrase, repeat the chaos, watch English melt — pass one phone around the whole crew.
       </Text>
       <PressStartPrompt onPress={startGame} />
-      <PrimaryButton title="Try it now — solo demo" variant="dim" onPress={tryDemo} style={{ marginTop: 12 }} />
       <ArcadeMenuPrompt
         onPress={openHowItWorks}
         headline="▶ HOW IT WORKS"
@@ -82,14 +74,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.party.logoBackdrop,
-    borderRadius: 12,
+    backgroundColor: 'transparent',
     overflow: 'visible',
     direction: 'ltr',
   },
   logo: {
     alignSelf: 'center',
-    backgroundColor: Colors.party.logoBackdrop,
+    backgroundColor: 'transparent',
   },
   homeLead: {
     fontFamily: Font.body,

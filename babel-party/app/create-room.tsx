@@ -7,7 +7,7 @@ import { Font } from '@/constants/Typography';
 import { trackRoomCreated } from '@/lib/analytics';
 import { defaultLanguagePool } from '@/lib/languages';
 import { useGameStore } from '@/lib/gameStore';
-import { FREE_TIER_MAX_PLAYERS, TOTAL_GAME_ROUNDS } from '@/lib/progression';
+import { FREE_TIER_MAX_PLAYERS, PAID_TIER_MAX_PLAYERS, TOTAL_GAME_ROUNDS } from '@/lib/progression';
 import {
   effectiveMaxPlayers,
   useSessionEntitlementsStore,
@@ -87,6 +87,7 @@ export default function CreateRoomScreen() {
   const [groupPlayerCount, setGroupPlayerCount] = useState(() =>
     Math.min(defaultGroupCount(settings.playerCount), maxPlayers),
   );
+  const stepperMax = PAID_TIER_MAX_PLAYERS;
   const [teams, setTeams] = useState(settings.teamsEnabled);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const soloCopy = soloCardCopy(settings.appGame);
@@ -116,7 +117,7 @@ export default function CreateRoomScreen() {
   };
 
   const onPlayerCountChange = (n: number) => {
-    if (n > maxPlayers && !sessionPassActive) {
+    if (!sessionPassActive && n > FREE_TIER_MAX_PLAYERS) {
       setPaywallOpen(true);
       return;
     }
@@ -143,12 +144,14 @@ export default function CreateRoomScreen() {
         visible={paywallOpen}
         triggerPoint="create_room_fourth_player"
         onClose={() => setPaywallOpen(false)}
-        onUnlocked={() => setGroupPlayerCount(4)}
+        onUnlocked={() =>
+          setGroupPlayerCount((c) => Math.min(c + 1, PAID_TIER_MAX_PLAYERS))
+        }
       />
       <BackLink fallbackHref="/game-mode" />
 
       <Text style={styles.sectionLead}>Multiplayer</Text>
-      <Stepper label="Players" value={groupPlayerCount} min={2} max={maxPlayers} onChange={onPlayerCountChange} />
+      <Stepper label="Players" value={groupPlayerCount} min={2} max={stepperMax} onChange={onPlayerCountChange} />
       {!sessionPassActive ? (
         <Text style={styles.lockHint}>Free tier: up to {FREE_TIER_MAX_PLAYERS} players. Unlock for up to 8.</Text>
       ) : null}

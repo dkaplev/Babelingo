@@ -37,6 +37,19 @@ import {
   View,
 } from 'react-native';
 
+function ListenReplayCountdown(props: { listensRemaining: number; caption: string }) {
+  const { listensRemaining, caption } = props;
+  return (
+    <View style={styles.listenCountWrap}>
+      <Text style={styles.listenCountLine}>
+        <Text style={styles.listenCountNum}>{listensRemaining}</Text>
+        <Text style={styles.listenCountRest}> / {MAX_PHRASE_PLAYS} replays left</Text>
+      </Text>
+      <Text style={styles.listenCountHint}>{caption}</Text>
+    </View>
+  );
+}
+
 function EchoBabelTurnScreen() {
   const party = usePartyPalette();
   const router = useRouter();
@@ -394,18 +407,16 @@ function EchoBabelTurnScreen() {
         <ActivityIndicator color={party.accent} style={{ marginVertical: 24 }} />
       ) : !needsTranslationFix ? (
         <>
-          <View style={[styles.listenStrip, { borderColor: party.accentPop }]}>
-            <Text style={[styles.listenStripTitle, { color: party.accentPop }]}>
-              Listens left: {listensRemaining} / {MAX_PHRASE_PLAYS}
-            </Text>
-            <Text style={styles.listenStripSub}>
-              {listensRemaining <= 0
+          <ListenReplayCountdown
+            listensRemaining={listensRemaining}
+            caption={
+              listensRemaining <= 0
                 ? 'No replays left — record when you’re ready.'
                 : hasListenedOnce
                   ? `You can replay up to ${listensRemaining} more time${listensRemaining === 1 ? '' : 's'}, or move on to record.`
-                  : `Tap Play below (${listensRemaining} time${listensRemaining === 1 ? '' : 's'}) — then Record your attempt.`}
-            </Text>
-          </View>
+                  : `Tap Play below (${listensRemaining} time${listensRemaining === 1 ? '' : 's'}) — then Record your attempt.`
+            }
+          />
 
           <PrimaryButton
             title={
@@ -744,12 +755,10 @@ function ReverseTurnScreen() {
         </View>
       ) : null}
 
-      <View style={[styles.listenStrip, { borderColor: party.accentPop }]}>
-        <Text style={[styles.listenStripTitle, { color: party.accentPop }]}>
-          Listens left: {listensRemaining} / {MAX_PHRASE_PLAYS}
-        </Text>
-        <Text style={styles.listenStripSub}>
-          {reverseStep === 1
+      <ListenReplayCountdown
+        listensRemaining={listensRemaining}
+        caption={
+          reverseStep === 1
             ? listensRemaining <= 0
               ? 'Record your backward mimic when ready.'
               : hasListenedOnce
@@ -759,9 +768,9 @@ function ReverseTurnScreen() {
               ? 'Record the real phrase when ready.'
               : hasListenedOnce
                 ? `Replay your clip reversed at normal speed (${listensRemaining} left) or record the answer.`
-                : 'Hear your attempt reversed at normal speed, then record the real phrase.'}
-        </Text>
-      </View>
+                : 'Hear your attempt reversed at normal speed, then record the real phrase.'
+        }
+      />
 
       <PrimaryButton
         title={
@@ -858,24 +867,33 @@ const styles = StyleSheet.create({
   },
   menuRow: { alignSelf: 'flex-start', marginBottom: 14, paddingVertical: 6, paddingRight: 12 },
   menuText: { fontFamily: Font.bodyBold, fontSize: 16 },
-  listenStrip: {
-    marginBottom: 16,
-    padding: 14,
-    borderRadius: 16,
-    backgroundColor: Colors.party.surface2,
-    borderWidth: 3,
+  listenCountWrap: {
+    marginBottom: 14,
+    marginTop: 2,
+    paddingVertical: 4,
   },
-  listenStripTitle: {
-    fontFamily: Font.title,
-    fontSize: 16,
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  listenStripSub: {
+  listenCountLine: {
     fontFamily: Font.body,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     color: Colors.party.textMuted,
+    opacity: 0.88,
+  },
+  listenCountNum: {
+    fontFamily: Font.bodyBold,
+    color: Colors.party.textMuted,
+  },
+  listenCountRest: {
+    fontFamily: Font.body,
+    color: Colors.party.textMuted,
+  },
+  listenCountHint: {
+    fontFamily: Font.body,
+    fontSize: 13,
+    lineHeight: 19,
+    color: Colors.party.textMuted,
+    opacity: 0.62,
+    marginTop: 4,
   },
   errorCard: {
     backgroundColor: Colors.party.card,

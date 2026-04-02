@@ -1,13 +1,16 @@
 import { MomentSharePanel } from '@/components/MomentSharePanel';
+import { PaywallModal } from '@/components/PaywallModal';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent, trackSessionCompleted } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
+import { saveLastLobbyPlayerNames } from '@/lib/recentPlayers';
+import { useSessionEntitlementsStore } from '@/lib/sessionEntitlementsStore';
 import { computeTeamTotals } from '@/lib/teamScores';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function SummaryScreen() {
@@ -16,6 +19,8 @@ export default function SummaryScreen() {
   const players = useGameStore((s) => s.players);
   const results = useGameStore((s) => s.results);
   const settings = useGameStore((s) => s.settings);
+  const sessionPassActive = useSessionEntitlementsStore((s) => s.sessionPassActive);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   const winner = useMemo(() => [...players].sort((a, b) => b.totalScore - a.totalScore)[0], [players]);
   const teamTotals = useMemo(() => computeTeamTotals(players), [players]);
@@ -48,6 +53,10 @@ export default function SummaryScreen() {
     });
   }, [results, settings.appGame, settings.gameMode, settings.rounds]);
 
+  useEffect(() => {
+    void saveLastLobbyPlayerNames(players.map((p) => p.name));
+  }, [players]);
+
   return (
     <Screen
       title="That’s a wrap"
@@ -68,6 +77,17 @@ export default function SummaryScreen() {
           }} />
         </View>
       }>
+      <PaywallModal visible={paywallOpen} triggerPoint="summary_unlock_cta" onClose={() => setPaywallOpen(false)} />
+      {!sessionPassActive ? (
+        <View style={styles.unlockCard}>
+          <Text style={styles.unlockTitle}>Unlock full access to keep going</Text>
+          <Text style={styles.unlockBody}>
+            You just played the free tier. Get all three games, more players, Mayhem, and full rounds for this session —
+            so the next game can go even harder.
+          </Text>
+          <PrimaryButton title="Unlock full access — $3.99" onPress={() => setPaywallOpen(true)} />
+        </View>
+      ) : null}
       {settings.teamsEnabled && teamTotals ? (
         <View style={styles.card}>
           <Text style={styles.kicker}>Winning side</Text>
@@ -133,6 +153,27 @@ export default function SummaryScreen() {
 }
 
 const styles = StyleSheet.create({
+  unlockCard: {
+    backgroundColor: Colors.party.surface2,
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: Colors.party.accent2,
+    gap: 12,
+  },
+  unlockTitle: {
+    fontFamily: Font.title,
+    fontSize: 20,
+    color: Colors.party.accentPop,
+    lineHeight: 28,
+  },
+  unlockBody: {
+    fontFamily: Font.body,
+    fontSize: 15,
+    lineHeight: 23,
+    color: Colors.party.textMuted,
+  },
   card: {
     backgroundColor: Colors.party.card,
     borderRadius: 18,

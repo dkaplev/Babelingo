@@ -5,6 +5,7 @@ import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
+import { loadLastLobbyPlayerNames } from '@/lib/recentPlayers';
 import { effectiveTotalRounds, useSessionEntitlementsStore } from '@/lib/sessionEntitlementsStore';
 import type { AppGameId } from '@/lib/types';
 import { useRouter } from 'expo-router';
@@ -33,6 +34,18 @@ export default function LobbyScreen() {
       const next = Array.from({ length: settings.playerCount }, (_, i) => prev[i] ?? `Player ${i + 1}`);
       return next;
     });
+  }, [settings.playerCount]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const n = settings.playerCount;
+    void loadLastLobbyPlayerNames(n).then((saved) => {
+      if (cancelled || !saved) return;
+      setNames(saved);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [settings.playerCount]);
 
   const onStart = () => {

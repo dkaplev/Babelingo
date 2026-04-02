@@ -65,3 +65,17 @@ export function devSessionPassUnlockEnabled(): boolean {
 export function grantSessionPassForDevTesting(): void {
   useSessionEntitlementsStore.getState().setSessionPassActive(true);
 }
+
+/** Set `EXPO_PUBLIC_PAYWALL_BACKDOOR_CODE` in EAS/CI (TestFlight) so testers can unlock from the paywall. Omit in App Store prod. */
+export function getPaywallBackdoorCode(): string | null {
+  const c = process.env.EXPO_PUBLIC_PAYWALL_BACKDOOR_CODE?.trim();
+  return c && c.length > 0 ? c : null;
+}
+
+export function tryPaywallBackdoorCode(input: string): boolean {
+  const expected = getPaywallBackdoorCode();
+  if (!expected) return false;
+  if (input.trim() !== expected) return false;
+  grantSessionPassForDevTesting();
+  return true;
+}

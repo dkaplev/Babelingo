@@ -5,6 +5,7 @@ import { Screen } from '@/components/Screen';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
+import { playbackSpeedForAppGame } from '@/lib/playbackSpeed';
 import { getPartyPalette } from '@/lib/partyPalette';
 import { useSessionEntitlementsStore } from '@/lib/sessionEntitlementsStore';
 import type { AppGameId } from '@/lib/types';
@@ -44,7 +45,7 @@ export default function PickGameScreen() {
       setPaywallOpen(true);
       return;
     }
-    updateSettings({ appGame: id });
+    updateSettings({ appGame: id, playbackSpeed: playbackSpeedForAppGame(id) });
     trackEvent('pick_game', { game: id });
     router.push('/game-mode');
   };

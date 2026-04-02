@@ -16,6 +16,8 @@ export function Screen(props: {
   backdropColor?: string;
   /** Scrim over `NesBackground`; default matches `party.surface`. */
   overlayColor?: string;
+  /** `flat` = solid backdrop only (matches logo PNG); `arcade` = stars + scrim. */
+  decoration?: 'arcade' | 'flat';
 }) {
   const {
     title,
@@ -26,10 +28,12 @@ export function Screen(props: {
     keyboardAvoiding = false,
     backdropColor,
     overlayColor,
+    decoration = 'arcade',
   } = props;
   const party = usePartyPalette();
   const rootBg = backdropColor ?? party.surface;
   const scrim = overlayColor ?? 'rgba(26, 27, 75, 0.88)';
+  const showArcade = decoration === 'arcade';
   const scroll = (
     <ScrollView
       contentContainerStyle={styles.scroll}
@@ -56,8 +60,12 @@ export function Screen(props: {
 
   return (
     <View style={[styles.root, { backgroundColor: rootBg }]}>
-      <NesBackground baseColor={rootBg} />
-      <View style={[styles.bgOverlay, { backgroundColor: scrim }]} pointerEvents="none" />
+      {showArcade ? (
+        <>
+          <NesBackground baseColor={rootBg} />
+          <View style={[styles.bgOverlay, { backgroundColor: scrim }]} pointerEvents="none" />
+        </>
+      ) : null}
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         {keyboardAvoiding ? (
           <KeyboardAvoidingView

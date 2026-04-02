@@ -10,8 +10,10 @@ import {
 } from '@/lib/analytics';
 import {
   devSessionPassUnlockEnabled,
+  getPaywallBackdoorCode,
   grantSessionPassForDevTesting,
   purchaseSessionPassWithReceipt,
+  tryPaywallBackdoorCode,
 } from '@/lib/purchases';
 import { useSessionEntitlementsStore } from '@/lib/sessionEntitlementsStore';
 import { useEffect, useState } from 'react';
@@ -22,6 +24,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 
@@ -35,9 +38,14 @@ type Props = {
 export function PaywallModal({ visible, triggerPoint, onClose, onUnlocked }: Props) {
   const paywallVariant = useSessionEntitlementsStore((s) => s.paywallVariant);
   const [busy, setBusy] = useState(false);
+  const [testerCode, setTesterCode] = useState('');
+  const backdoorCodeConfigured = Boolean(getPaywallBackdoorCode());
 
   useEffect(() => {
-    if (!visible) setBusy(false);
+    if (!visible) {
+      setBusy(false);
+      setTesterCode('');
+    }
   }, [visible]);
 
   useEffect(() => {
@@ -89,6 +97,40 @@ export function PaywallModal({ visible, triggerPoint, onClose, onUnlocked }: Pro
           </Text>
           {devSessionPassUnlockEnabled() ? (
             <Text style={styles.devHint}>Dev: EXPO_PUBLIC_DEV_SESSION_PASS unlocks without StoreKit.</Text>
+          ) : null}
+          {backdoorCodeConfigured ? (
+            <View style={styles.testerBlock}>
+              <Text style={styles.devHint}>TestFlight / internal: enter tester code</Text>
+              <TextInput
+                value={testerCode}
+                onChangeText={setTesterCode}
+                placeholder="Session code"
+                placeholderTextColor={Colors.party.textMuted}
+                style={styles.codeInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!busy}
+              />
+              <Pressable
+                onPress={() => {
+                  const t = testerCode.trim();
+                  if (!t) return;
+                  if (tryPaywallBackdoorCode(t)) {
+                    setTesterCode('');
+                    onUnlocked?.();
+                    onClose();
+                    Alert.alert('Unlocked', 'Full session access is active on this device.');
+                  } else {
+                    Alert.alert('Code not recognized', 'Double-check the value from your host.');
+                  }
+                }}
+                disabled={busy || !testerCode.trim()}
+                style={styles.testerApplyWrap}>
+                <Text style={[styles.testerApply, (!testerCode.trim() || busy) && styles.testerApplyDisabled]}>
+                  Apply tester code
+                </Text>
+              </Pressable>
+            </View>
           ) : null}
           <PrimaryButton
             title={busy ? 'Working…' : 'Unlock now — $3.99'}
@@ -162,6 +204,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.party.accent2,
   },
+  testerBlock: { gap: 8, marginTop: 4 },
+  codeInput: {
+    fontFamily: Font.body,
+    fontSize: 16,
+    color: Colors.party.text,
+    backgroundColor: Colors.party.card,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.party.neonStroke,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  testerApplyWrap: { alignSelf: 'flex-start', paddingVertical: 4 },
+  testerApply: {
+    fontFamily: Font.bodyBold,
+    fontSize: 14,
+    color: Colors.party.accent2,
+    textDecorationLine: 'underline',
+  },
+  testerApplyDisabled: { opacity: 0.4 },
   secondaryWrap: { alignSelf: 'center', paddingVertical: 12 },
   secondary: { fontFamily: Font.body, fontSize: 15, color: Colors.party.textMuted },
   restore: {
