@@ -1,5 +1,6 @@
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { ShareModal } from '@/components/ShareModal';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
@@ -12,7 +13,7 @@ import {
 } from '@/lib/sessionHighlights';
 import { computeTeamTotals } from '@/lib/teamScores';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function ScoreboardScreen() {
@@ -22,6 +23,7 @@ export default function ScoreboardScreen() {
   const currentRound = useGameStore((s) => s.currentRound);
   const results = useGameStore((s) => s.results);
   const goScoreboardToNext = useGameStore((s) => s.goScoreboardToNext);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   const sorted = [...players].sort((a, b) => b.totalScore - a.totalScore);
   const sessionHighChaos = useMemo(
@@ -42,7 +44,7 @@ export default function ScoreboardScreen() {
         : [],
     [settings.appGame, results, currentRound],
   );
-  const showEchoRoundPhrase = Boolean(roundAnswerPhrase) && settings.appGame === 'echo_translator';
+  const showEchoRoundPhrase = Boolean(roundAnswerPhrase) && (settings.appGame === 'echo_translator');
 
   const onNext = () => {
     goScoreboardToNext();
@@ -53,15 +55,41 @@ export default function ScoreboardScreen() {
     else router.replace('/turn');
   };
 
+  const funniest = useMemo(
+    () =>
+      [...results.filter((r) => !r.turnSkipped && r.roundNumber === currentRound)].sort(
+        (a, b) => (b.chaosScore ?? 0) - (a.chaosScore ?? 0),
+      )[0] ?? null,
+    [results, currentRound],
+  );
+
   return (
+    <>
+      <ShareModal
+        visible={shareModalOpen}
+        result={funniest}
+        onClose={() => setShareModalOpen(false)}
+      />
     <Screen
       title="Scoreboard"
       subtitle={`After round ${currentRound} of ${settings.rounds}`}
       footer={
-        <PrimaryButton
-          title={currentRound >= settings.rounds ? 'Final summary' : 'Next round'}
-          onPress={onNext}
-        />
+        <View style={{ gap: 10 }}>
+          {funniest ? (
+            <PrimaryButton
+              variant="ghost"
+              title="Share this moment"
+              onPress={() => {
+                trackEvent('share_moment_tap', { trigger: 'scoreboard' });
+                setShareModalOpen(true);
+              }}
+            />
+          ) : null}
+          <PrimaryButton
+            title={currentRound >= settings.rounds ? 'Final summary' : 'Next round'}
+            onPress={onNext}
+          />
+        </View>
       }>
       {reverseLines.length > 0 ? (
         <View style={styles.phraseBanner}>
@@ -160,6 +188,7 @@ export default function ScoreboardScreen() {
         })}
       </View>
     </Screen>
+    </>
   );
 }
 

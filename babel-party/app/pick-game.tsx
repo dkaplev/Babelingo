@@ -13,21 +13,31 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-const GAMES: { id: AppGameId; title: string; body: string }[] = [
+const GAMES: { id: AppGameId; title: string; body: string; emoji: string; skipVibe?: boolean }[] = [
   {
     id: 'echo_translator',
     title: 'Echo Translator',
     body: 'Hear a wild foreign line, throw your best mimic, then watch the scoreboard roast how close you got.',
+    emoji: '🎙️',
+  },
+  {
+    id: 'halloumi_mode',
+    title: '🟦🟦 Halloumi Mode 🟦🟦',
+    body: 'Echo Translator locked to Greek only — every player gets a different phrase every turn. Opa! Perfect for learning Greek the chaotic way.',
+    emoji: '🏛️',
+    skipVibe: true,
   },
   {
     id: 'babel_phone',
     title: 'Babel Phone',
     body: 'Each earful is a real language; English only mutates through the chain of recordings — solo is one hop, party is full chaos.',
+    emoji: '📞',
   },
   {
     id: 'reverse_audio',
     title: 'Reverse Audio',
     body: 'Tiny English lines played backward, then reversed again after you mimic — say the real phrase before the room loses it.',
+    emoji: '🔄',
   },
 ];
 
@@ -38,16 +48,21 @@ export default function PickGameScreen() {
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [paywallTrigger, setPaywallTrigger] = useState('pick_game_locked_mode');
 
-  const choose = (id: AppGameId) => {
-    const locked = !sessionPassActive && id !== 'echo_translator';
+  const choose = (game: typeof GAMES[number]) => {
+    const freeGames: AppGameId[] = ['echo_translator', 'halloumi_mode'];
+    const locked = !sessionPassActive && !freeGames.includes(game.id);
     if (locked) {
-      setPaywallTrigger(`pick_game_${id}`);
+      setPaywallTrigger(`pick_game_${game.id}`);
       setPaywallOpen(true);
       return;
     }
-    updateSettings({ appGame: id, playbackSpeed: playbackSpeedForAppGame(id) });
-    trackEvent('pick_game', { game: id });
-    router.push('/game-mode');
+    updateSettings({ appGame: game.id, playbackSpeed: playbackSpeedForAppGame(game.id) });
+    trackEvent('pick_game', { game: game.id });
+    if (game.skipVibe) {
+      router.push('/create-room');
+    } else {
+      router.push('/game-mode');
+    }
   };
 
   return (
@@ -60,7 +75,8 @@ export default function PickGameScreen() {
       <View style={styles.stack}>
         {GAMES.map((g) => {
           const pal = getPartyPalette(g.id);
-          const locked = !sessionPassActive && g.id !== 'echo_translator';
+          const freeGames: AppGameId[] = ['echo_translator', 'halloumi_mode'];
+          const locked = !sessionPassActive && !freeGames.includes(g.id);
           return (
             <View
               key={g.id}
@@ -70,7 +86,7 @@ export default function PickGameScreen() {
                 {locked ? ' 🔒' : ''}
               </Text>
               <Text style={[styles.cardBody, { color: pal.text }]}>{g.body}</Text>
-              <PrimaryButton title={locked ? 'Unlock to play' : 'Play'} onPress={() => choose(g.id)} />
+              <PrimaryButton title={locked ? 'Unlock to play' : 'Play'} onPress={() => choose(g)} />
             </View>
           );
         })}

@@ -1,7 +1,7 @@
 export type DifficultyPreset = 'chill' | 'spicy' | 'chaos';
 
 /** Which party game variant is active for the session. */
-export type AppGameId = 'echo_translator' | 'babel_phone' | 'reverse_audio';
+export type AppGameId = 'echo_translator' | 'babel_phone' | 'reverse_audio' | 'halloumi_mode';
 
 /** Regular = curated 7-round climb; Mayhem = random heat, phrases always 4+ words. */
 export type GameMode = 'regular' | 'mayhem';

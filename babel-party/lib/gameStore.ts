@@ -335,6 +335,8 @@ export const useGameStore = create<
     let codes: string[];
     if (appGame === 'reverse_audio') {
       codes = ['en'];
+    } else if (appGame === 'halloumi_mode') {
+      codes = ['el'];
     } else if (settings.gameMode === 'mayhem') {
       const mayhemBands: LanguageDifficultyBand[] = ['easy', 'moderate', 'hard'];
       const band = mayhemBands[Math.floor(Math.random() * mayhemBands.length)]!;
@@ -344,7 +346,7 @@ export const useGameStore = create<
       codes = languageCodesForBands(stage.languageBands);
       if (codes.length === 0) codes = defaultLanguagePool();
     }
-    if (appGame === 'echo_translator' || appGame === 'babel_phone') {
+    if (appGame === 'echo_translator' || appGame === 'babel_phone' || appGame === 'halloumi_mode') {
       codes = excludeEnglishFromPool(codes);
     }
     let roundLanguages: string[];
@@ -352,6 +354,10 @@ export const useGameStore = create<
     if (appGame === 'reverse_audio') {
       roundLanguages = order.map(() => 'en');
       roundPhrases = pickReverseRoundPhrases(order.length, stage.phraseMinWords, stage.phraseMaxWords);
+    } else if (appGame === 'halloumi_mode') {
+      // Greek-only, every player gets a distinct phrase every turn
+      roundLanguages = order.map(() => 'el');
+      roundPhrases = pickDistinctPhrasesForWordRange(order.length, 'mixed', stage.phraseMinWords, stage.phraseMaxWords);
     } else {
       roundLanguages = assignLanguagesForRound(codes, order, history);
       if (appGame === 'babel_phone') {

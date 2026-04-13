@@ -76,8 +76,26 @@ const reverse: PartyPalette = {
   podiumBronze: '#059669',
 };
 
+/** Halloumi Mode — Greek flag blue + white + golden cheese on deep navy. */
+const halloumi: PartyPalette = {
+  ...baseSurfaces,
+  surface: '#0D1B3E',
+  surface2: '#122050',
+  card: '#1A2D6B',
+  borderSubtle: '#1E4098',
+  accent: '#0D5EAF',
+  accent2: '#FFFFFF',
+  accentPop: '#F5C842',
+  neonStroke: '#1B69C8',
+  success: '#FFFFFF',
+  podiumGold: '#F5C842',
+  podiumSilver: '#AABDE8',
+  podiumBronze: '#0D5EAF',
+};
+
 export function getPartyPalette(appGame: AppGameId): PartyPalette {
   if (appGame === 'babel_phone') return babel;
   if (appGame === 'reverse_audio') return reverse;
+  if (appGame === 'halloumi_mode') return halloumi;
   return echo;
 }
