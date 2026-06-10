@@ -1,8 +1,11 @@
 import type { LanguageDifficultyBand } from '@/lib/languages';
 import type { AppGameId, GameMode } from '@/lib/types';
 
-/** Full arc length (rounds 1–7 scripted; round 7+ reuses “all-out” rules if extended later). */
-export const TOTAL_GAME_ROUNDS = 7;
+/**
+ * Full arc length — compressed to 4 rounds (~15 min party session).
+ * Rounds beyond 4 are encores (summary “one more round”) and reuse final-boss rules.
+ */
+export const TOTAL_GAME_ROUNDS = 4;
 
 /** Free tier (F-07): Echo + Regular + up to 3 players, 3 rounds without session pass. */
 export const FREE_TIER_ROUNDS = 3;
@@ -20,80 +23,53 @@ export type RoundStage = {
   phraseMaxWords: number;
 };
 
-/** Regular mode: curated climb — language heat + phrase length. */
+/** Regular mode: compressed 4-round climb — easy in, peak chaos out. */
 export function regularRoundStage(roundIndex1Based: number): RoundStage {
   switch (roundIndex1Based) {
     case 1:
       return {
         headline: 'Round 1 · Warm-up',
         tagline: 'Short phrases, friendly languages — wake up the room.',
-        tierBadge: 'Tier 1 · Tourist tracks',
+        tierBadge: 'Warm-up',
         languageBands: ['easy'],
         phraseMinWords: 3,
         phraseMaxWords: 5,
       };
     case 2:
       return {
-        headline: 'Round 2 · Spicier tongues',
-        tagline: 'Still compact lines — but the languages bite back a little.',
-        tierBadge: 'Tier 2 · Border crossing',
-        languageBands: ['moderate'],
-        phraseMinWords: 3,
-        phraseMaxWords: 5,
+        headline: 'Round 2 · Heating up',
+        tagline: 'Trickier languages join the party.',
+        tierBadge: 'Heating up',
+        languageBands: ['easy', 'moderate'],
+        phraseMinWords: 4,
+        phraseMaxWords: 6,
       };
     case 3:
       return {
-        headline: 'Round 3 · Stretch mode',
-        tagline: 'Easier languages, longer phrases — more syllables to juggle.',
-        tierBadge: 'Tier 3 · Phrase gym',
-        languageBands: ['easy'],
-        phraseMinWords: 6,
+        headline: 'Round 3 · Full spice',
+        tagline: 'Longer lines, harder tongues — chaos is the point now.',
+        tierBadge: 'Full spice',
+        languageBands: ['moderate', 'hard'],
+        phraseMinWords: 5,
         phraseMaxWords: 7,
       };
     case 4:
       return {
-        headline: 'Round 4 · Double stack',
-        tagline: 'Longer phrases meet trickier languages. Stack the chaos.',
-        tierBadge: 'Tier 4 · Double decker',
-        languageBands: ['moderate'],
-        phraseMinWords: 6,
-        phraseMaxWords: 7,
-      };
-    case 5:
-      return {
-        headline: 'Round 5 · World-stage heat',
-        tagline: 'Hardest languages — we keep the phrase shorter so you can focus.',
-        tierBadge: 'Tier 5 · World stage',
-        languageBands: ['hard'],
-        phraseMinWords: 3,
-        phraseMaxWords: 5,
-      };
-    case 6:
-      return {
-        headline: 'Round 6 · Boss wave',
-        tagline: 'Maximum heat: tough languages and long phrases together.',
-        tierBadge: 'Tier 6 · Boss wave',
+        headline: 'Round 4 · Final boss',
+        tagline: 'Hardest languages, longest lines — close the night loud.',
+        tierBadge: 'Final boss',
         languageBands: ['hard'],
         phraseMinWords: 6,
-        phraseMaxWords: 7,
-      };
-    case 7:
-      return {
-        headline: 'Round 7 · Final boss',
-        tagline: 'Hardest languages only, longest lines — peak chaos to close the night.',
-        tierBadge: 'Tier 7 · Maximum heat',
-        languageBands: ['hard'],
-        phraseMinWords: 7,
-        phraseMaxWords: 10,
+        phraseMaxWords: 9,
       };
     default:
       return {
         headline: `Round ${roundIndex1Based} · Encore`,
-        tagline: 'Same final-boss rules — hardest pool, long phrases.',
-        tierBadge: `Tier ${roundIndex1Based} · Encore`,
+        tagline: 'Final-boss rules — the crowd asked for more.',
+        tierBadge: 'Encore',
         languageBands: ['hard'],
-        phraseMinWords: 7,
-        phraseMaxWords: 10,
+        phraseMinWords: 6,
+        phraseMaxWords: 9,
       };
   }
 }

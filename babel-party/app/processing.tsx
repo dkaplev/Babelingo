@@ -3,11 +3,13 @@ import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
+import { audioModePlaybackSpeaker } from '@/lib/audioMode';
 import { currentPlayer, useGameStore } from '@/lib/gameStore';
 import { languageByCode } from '@/lib/languages';
 import { buildSoloBabelDisplayChain } from '@/lib/babelSoloChain';
 import { runEchoPipeline, runReversePipeline } from '@/lib/pipeline';
 import type { TurnResult } from '@/lib/types';
+import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -24,6 +26,36 @@ export default function ProcessingScreen() {
   const ran = useRef(false);
   const [line] = useState(() => COPY[Math.floor(Math.random() * COPY.length)]!);
   const [timedOut, setTimedOut] = useState(false);
+  const replaySound = useRef<Audio.Sound | null>(null);
+
+  /**
+   * Party moment: while the server works, play the player's attempt out loud
+   * so the whole room hears the gibberish — kills the silent wait.
+   */
+  useEffect(() => {
+    const uri = useGameStore.getState().pendingRecordingUri;
+    if (!uri) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await audioModePlaybackSpeaker();
+        const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true, volume: 1 });
+        if (cancelled) {
+          await sound.unloadAsync();
+          return;
+        }
+        replaySound.current = sound;
+      } catch {
+        /* non-fatal — the wait just stays quiet */
+      }
+    })();
+    return () => {
+      cancelled = true;
+      const s = replaySound.current;
+      replaySound.current = null;
+      if (s) void s.unloadAsync().catch(() => {});
+    };
+  }, []);
 
   useEffect(() => {
     if (ran.current) return;
@@ -136,10 +168,11 @@ export default function ProcessingScreen() {
   }
 
   return (
-    <Screen title="Hold tight" subtitle={line}>
+    <Screen title="Listen back!" subtitle={line}>
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Colors.party.accent} style={styles.spinner} />
-        <Text style={styles.note}>Hype the player — this usually takes a few seconds.</Text>
+        <Text style={styles.betPrompt}>🗣 That's what they said…</Text>
+        <Text style={styles.note}>Shout your guesses — what is it in English?</Text>
       </View>
     </Screen>
   );
@@ -148,6 +181,14 @@ export default function ProcessingScreen() {
 const styles = StyleSheet.create({
   center: { alignItems: 'center', paddingTop: 8 },
   spinner: { marginTop: 32, marginBottom: 24 },
+  betPrompt: {
+    fontFamily: Font.bodyBold,
+    color: Colors.party.accentPop,
+    fontSize: 20,
+    lineHeight: 28,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
   note: {
     fontFamily: Font.body,
     color: Colors.party.textMuted,

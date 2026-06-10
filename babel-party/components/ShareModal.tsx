@@ -1,9 +1,14 @@
+import { SharePoster, SHARE_POSTER_HEIGHT, SHARE_POSTER_WIDTH } from '@/components/SharePoster';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
+import { trackSharePosterTapped } from '@/lib/analytics';
 import { normalizeTranslationText } from '@/lib/normalizeTranslation';
+import { POSTER_THEMES, type PosterTheme } from '@/lib/posterThemes';
 import type { TurnResult } from '@/lib/types';
-import { useCallback } from 'react';
+import * as Sharing from 'expo-sharing';
+import { useCallback, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Modal,
   Platform,
   Pressable,
@@ -12,8 +17,15 @@ import {
   Text,
   View,
 } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
 
 const APP_LINK = 'https://babelingo.app';
+
+function themeForResult(result: TurnResult): PosterTheme {
+  const chaos = result.chaosScore ?? 0;
+  if (chaos >= 90) return POSTER_THEMES.find((t) => t.id === 'neon') ?? POSTER_THEMES[0]!;
+  return POSTER_THEMES.find((t) => t.id === 'retro') ?? POSTER_THEMES[0]!;
+}
 
 type Props = {
   visible: boolean;
@@ -22,27 +34,60 @@ type Props = {
 };
 
 export function ShareModal({ visible, result, onClose }: Props) {
+  const posterRef = useRef<View>(null);
+  const [busy, setBusy] = useState(false);
+
   const onShare = useCallback(async () => {
-    if (!result) return;
+    if (!result || busy) return;
+    setBusy(true);
     const original = result.phraseOriginal;
     const mangled = normalizeTranslationText(result.reverseEnglish);
-    const playerPart = result.playerName ? ` (${result.playerName})` : '';
-    const text =
+    const caption =
       `It was meant to be "${original}", but actually sounded like "${mangled}". Hilarious!\n\n` +
-      `Play Translation Game Babelingo${playerPart}: ${APP_LINK}`;
+      `Translation party game Babelingo — ${APP_LINK}`;
+    trackSharePosterTapped(result.chaosScore ?? 0, 'share_modal');
     try {
-      await Share.share(
-        Platform.OS === 'ios' ? { message: text, url: APP_LINK } : { message: text },
-      );
+      // Two frames so the offscreen poster has laid out before capture.
+      await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+      const ref = posterRef.current;
+      if (!ref) throw new Error('no poster');
+      const uri = await captureRef(ref, {
+        format: 'png',
+        quality: 0.92,
+        width: SHARE_POSTER_WIDTH,
+        height: SHARE_POSTER_HEIGHT,
+        result: 'tmpfile',
+      });
+      const fileUri =
+        Platform.OS === 'android' && uri && !uri.startsWith('file') ? `file://${uri}` : uri;
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: 'image/png', dialogTitle: caption });
+      } else {
+        await Share.share({ message: caption, url: fileUri });
+      }
     } catch {
-      // dismissed by user
+      // Image capture failed — text share still carries the joke and the link.
+      try {
+        await Share.share(
+          Platform.OS === 'ios' ? { message: caption, url: APP_LINK } : { message: caption },
+        );
+      } catch {
+        /* dismissed */
+      }
+    } finally {
+      setBusy(false);
     }
-  }, [result]);
+  }, [result, busy]);
 
   if (!result) return null;
 
   const original = result.phraseOriginal;
   const mangled = normalizeTranslationText(result.reverseEnglish);
+  const theme = themeForResult(result);
+  const foreignForPoster =
+    result.translatedText?.trim() && !result.translatedText.startsWith('(')
+      ? normalizeTranslationText(result.translatedText)
+      : normalizeTranslationText(result.phraseOriginal);
 
   return (
     <Modal
@@ -71,17 +116,32 @@ export function ShareModal({ visible, result, onClose }: Props) {
             <Text style={styles.funnyLabel}>{result.funnyLabel}</Text>
           ) : null}
 
-          <Text style={styles.byline}>
-            Translation Game "Babelingo" — play it with your friends
-          </Text>
+          <Text style={styles.byline}>Shares as a poster image with the game link on it.</Text>
 
-          <Pressable style={styles.shareBtn} onPress={() => void onShare()}>
-            <Text style={styles.shareBtnText}>Share 🔗</Text>
+          <Pressable style={[styles.shareBtn, busy && styles.shareBtnBusy]} onPress={() => void onShare()}>
+            {busy ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.shareBtnText}>Share the poster 🔗</Text>
+            )}
           </Pressable>
 
           <Pressable style={styles.closeBtn} onPress={onClose}>
             <Text style={styles.closeBtnText}>Close</Text>
           </Pressable>
+
+          <View style={styles.offscreen} pointerEvents="none">
+            <View ref={posterRef} collapsable={false}>
+              <SharePoster
+                theme={theme}
+                foreignPhrase={foreignForPoster}
+                englishMangled={mangled}
+                playerName={result.playerName}
+                chaosScore={result.chaosScore ?? 0}
+                languageLabel={result.languageLabel || 'FOREIGN CLUE'}
+              />
+            </View>
+          </View>
         </Pressable>
       </Pressable>
     </Modal>
@@ -175,7 +235,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 4,
+    minHeight: 50,
+    justifyContent: 'center',
   },
+  shareBtnBusy: { opacity: 0.7 },
   shareBtnText: {
     fontFamily: Font.bodyBold,
     fontSize: 17,
@@ -190,4 +253,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.party.textMuted,
   },
+  offscreen: { position: 'absolute', left: -10000, top: 0, opacity: 1 },
 });

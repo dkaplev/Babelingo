@@ -35,9 +35,16 @@ const REVERSE: Slide[] = [
   { title: 'See what it became', body: 'Say the real short line — scoreboard shows everyone’s answers.', emoji: '✨' },
 ];
 
+const HALLOUMI: Slide[] = [
+  { title: 'Everything is Greek', body: 'Every clue is Greek — and every player gets a different phrase.', emoji: '🇬🇷' },
+  { title: 'Mimic what you hear', body: 'Record your best Greek impression after the clue.', emoji: '🎙️' },
+  { title: 'Learn by laughing', body: 'English comes back weird — and a bit of Greek sticks. Opa!', emoji: '🧀' },
+];
+
 function slidesFor(game: AppGameId): Slide[] {
   if (game === 'babel_phone') return BABEL;
   if (game === 'reverse_audio') return REVERSE;
+  if (game === 'halloumi_mode') return HALLOUMI;
   return ECHO;
 }
 

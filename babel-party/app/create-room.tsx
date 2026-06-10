@@ -50,6 +50,7 @@ function Stepper(props: {
 function gameLabel(appGame: string): string {
   if (appGame === 'babel_phone') return 'Babel Phone';
   if (appGame === 'reverse_audio') return 'Reverse Audio';
+  if (appGame === 'halloumi_mode') return 'Halloumi Mode';
   return 'Echo Translator';
 }
 
@@ -89,8 +90,19 @@ export default function CreateRoomScreen() {
   );
   const stepperMax = PAID_TIER_MAX_PLAYERS;
   const [teams, setTeams] = useState(settings.teamsEnabled);
+  const [mayhem, setMayhem] = useState(settings.gameMode === 'mayhem');
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallTrigger, setPaywallTrigger] = useState('create_room_fourth_player');
   const soloCopy = soloCardCopy(settings.appGame);
+
+  const onToggleMayhem = () => {
+    if (!mayhem && !sessionPassActive) {
+      setPaywallTrigger('create_room_mayhem');
+      setPaywallOpen(true);
+      return;
+    }
+    setMayhem((v) => !v);
+  };
 
   useEffect(() => {
     if (!sessionPassActive) {
@@ -102,6 +114,7 @@ export default function CreateRoomScreen() {
     updateSettings({
       playerCount: opts.playerCount,
       rounds: TOTAL_GAME_ROUNDS,
+      gameMode: mayhem ? 'mayhem' : 'regular',
       teamsEnabled: opts.teamsEnabled,
       difficulty: 'chaos',
       category: 'mixed',
@@ -109,7 +122,7 @@ export default function CreateRoomScreen() {
     });
     trackRoomCreated({
       mode: settings.appGame,
-      vibe: settings.gameMode,
+      vibe: mayhem ? 'mayhem' : 'regular',
       player_count: opts.playerCount,
       is_solo: opts.roomMode === 'solo',
     });
@@ -142,13 +155,14 @@ export default function CreateRoomScreen() {
       subtitle={`${gameLabel(settings.appGame)} · group or solo.`}>
       <PaywallModal
         visible={paywallOpen}
-        triggerPoint="create_room_fourth_player"
+        triggerPoint={paywallTrigger}
         onClose={() => setPaywallOpen(false)}
-        onUnlocked={() =>
-          setGroupPlayerCount((c) => Math.min(c + 1, PAID_TIER_MAX_PLAYERS))
-        }
+        onUnlocked={() => {
+          if (paywallTrigger === 'create_room_mayhem') setMayhem(true);
+          else setGroupPlayerCount((c) => Math.min(c + 1, PAID_TIER_MAX_PLAYERS));
+        }}
       />
-      <BackLink fallbackHref="/game-mode" />
+      <BackLink fallbackHref="/pick-game" />
 
       <Text style={styles.sectionLead}>Multiplayer</Text>
       <Stepper label="Players" value={groupPlayerCount} min={2} max={stepperMax} onChange={onPlayerCountChange} />
@@ -164,6 +178,16 @@ export default function CreateRoomScreen() {
         {teams
           ? 'Players alternate A · B · A · B in the lobby. Points still go to whoever held the phone — but the scoreboard and final winner are by team total (sum of both players on that team).'
           : 'Everyone competes solo; high score wins.'}
+      </Text>
+
+      <Text style={styles.section}>Mayhem{sessionPassActive ? '' : ' 🔒'}</Text>
+      <Pressable style={[styles.toggle, mayhem && styles.toggleOn]} onPress={onToggleMayhem}>
+        <Text style={styles.toggleText}>{mayhem ? 'Mayhem: ON' : 'Mayhem: off'}</Text>
+      </Pressable>
+      <Text style={styles.teamHint}>
+        {mayhem
+          ? 'Random language heat every round, never-short phrases — for crews who know the drill.'
+          : 'Off = the guided climb: friendly start, final-boss finish.'}
       </Text>
 
       <PrimaryButton title="Continue to lobby" onPress={onPartyContinue} style={{ marginTop: 20 }} />

@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-const GAMES: { id: AppGameId; title: string; body: string; emoji: string; skipVibe?: boolean }[] = [
+const GAMES: { id: AppGameId; title: string; body: string; emoji: string }[] = [
   {
     id: 'echo_translator',
     title: 'Echo Translator',
@@ -25,7 +25,6 @@ const GAMES: { id: AppGameId; title: string; body: string; emoji: string; skipVi
     title: '🟦🟦 Halloumi Mode 🟦🟦',
     body: 'Echo Translator locked to Greek only — every player gets a different phrase every turn. Opa! Perfect for learning Greek the chaotic way.',
     emoji: '🏛️',
-    skipVibe: true,
   },
   {
     id: 'babel_phone',
@@ -58,17 +57,13 @@ export default function PickGameScreen() {
     }
     updateSettings({ appGame: game.id, playbackSpeed: playbackSpeedForAppGame(game.id) });
     trackEvent('pick_game', { game: game.id });
-    if (game.skipVibe) {
-      router.push('/create-room');
-    } else {
-      router.push('/game-mode');
-    }
+    router.push('/create-room');
   };
 
   return (
     <Screen
       title="Pick a game"
-      subtitle="Three modes — tap a card to continue."
+      subtitle="Pick your flavor of chaos — tap a card to play."
       neutralChrome>
       <PaywallModal visible={paywallOpen} triggerPoint={paywallTrigger} onClose={() => setPaywallOpen(false)} />
       <BackLink fallbackHref="/" />

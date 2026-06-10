@@ -1,5 +1,4 @@
 import { usePartyPalette } from '@/components/GameThemeProvider';
-import { PlaybackSpeedSlider } from '@/components/PlaybackSpeedSlider';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { RecordingErrorBanner } from '@/components/RecordingErrorBanner';
 import { Screen } from '@/components/Screen';
@@ -23,6 +22,7 @@ import {
 } from '@/lib/playGoogleTts';
 import { translateEnToWithMeta, type TranslationSource } from '@/lib/translate';
 import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
@@ -50,6 +50,25 @@ function ListenReplayCountdown(props: { listensRemaining: number; caption: strin
   );
 }
 
+/** Random handoff title so even passing the phone gets a laugh. */
+const PASS_TITLES = [
+  'Minister of Mispronunciation',
+  'Captain of Chaos',
+  'Director of Beautiful Mistakes',
+  'Head of Accidental Poetry',
+  'Chief Tongue Twister',
+  'Ambassador of Gibberish',
+  'Professor of Wrong Answers',
+  'DJ of Disaster',
+];
+
+function passTitleFor(playerId: string, round: number, turn: number): string {
+  let h = 0;
+  const seed = `${playerId}-${round}-${turn}`;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+  return PASS_TITLES[Math.abs(h) % PASS_TITLES.length]!;
+}
+
 function EchoBabelTurnScreen() {
   const party = usePartyPalette();
   const router = useRouter();
@@ -60,7 +79,6 @@ function EchoBabelTurnScreen() {
   const setTranslation = useGameStore((s) => s.setTranslation);
   const nextListenConsumed = useGameStore((s) => s.nextListenConsumed);
   const setRecordingUri = useGameStore((s) => s.setRecordingUri);
-  const pendingRecordingUri = useGameStore((s) => s.pendingRecordingUri);
   const commitSkippedTurn = useGameStore((s) => s.commitSkippedTurn);
   const resetSession = useGameStore((s) => s.resetSession);
   const phase = useGameStore((s) => s.phase);
@@ -75,15 +93,17 @@ function EchoBabelTurnScreen() {
   const [phrasePlaybackBusy, setPhrasePlaybackBusy] = useState(false);
   const [micDenied, setMicDenied] = useState(false);
   const [showSkip, setShowSkip] = useState(false);
+  const [tooShort, setTooShort] = useState(false);
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const player = useGameStore((s) => currentPlayer(s));
   const players = useGameStore((s) => s.players);
+  const turnIndex = useGameStore((s) => s.turnIndex);
+  const currentRound = useGameStore((s) => s.currentRound);
   const solo = players.length === 1;
   const lang = currentLanguageCode ? languageByCode(currentLanguageCode) : undefined;
 
   const hasListenedOnce = listensRemaining < MAX_PHRASE_PLAYS;
-  const hasRecording = Boolean(pendingRecordingUri);
   const canStartRecord = hasListenedOnce && !phrasePlaybackBusy && !loadingTts;
   const translationReady = Boolean(translatedText?.trim());
   const needsTranslationFix =
@@ -268,6 +288,7 @@ function EchoBabelTurnScreen() {
     Speech.stop();
     await stopPipelineTtsPlayback();
     setRecordingUri(null);
+    setTooShort(false);
     const pr = await requestMicrophonePermission();
     if (!pr.ok) {
       setMicDenied(true);
@@ -281,6 +302,7 @@ function EchoBabelTurnScreen() {
       const rec = new Audio.Recording();
       await rec.prepareToRecordAsync(RECORDING_OPTIONS_GOOGLE_STT);
       await rec.startAsync();
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       setRecording(rec);
       setIsRecording(true);
       setSeconds(0);
@@ -291,14 +313,15 @@ function EchoBabelTurnScreen() {
     }
   };
 
-  const stopRecording = async () => {
+  /** Stop and immediately submit — the round shouldn't wait for an extra confirm tap. */
+  const stopAndSubmit = async () => {
     if (!recording) return;
     const elapsed = seconds;
+    let uri: string | null = null;
     try {
       await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
+      uri = recording.getURI();
       setRecordingUri(uri);
-      if (elapsed < 1) setShowSkip(true);
     } finally {
       setRecording(null);
       setIsRecording(false);
@@ -309,11 +332,13 @@ function EchoBabelTurnScreen() {
       await audioModePlaybackSpeaker();
       await new Promise((r) => setTimeout(r, Platform.OS === 'ios' ? 90 : 40));
     }
-  };
-
-  const onSubmit = async () => {
-    if (isRecording) await stopRecording();
-    router.push('/processing');
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+    if (uri && elapsed >= 1) {
+      router.push('/processing');
+    } else {
+      setTooShort(true);
+      setRecordingUri(null);
+    }
   };
 
   if (!roundPhrase || !player) {
@@ -321,42 +346,77 @@ function EchoBabelTurnScreen() {
   }
 
   if (!passConfirmed) {
+    const passTitle = passTitleFor(player.id, currentRound, turnIndex);
     return (
       <Screen
         title={solo ? 'Your turn' : 'Pass the phone'}
-        subtitle={
-          solo
-            ? `${player.name}, you’re playing solo — the real line stays secret until the scoreboard. The next screen is audio only.`
-            : `${player.name} is up. The real line stays secret until the round ends — they only get the audio clue on the next screen.`
-        }
+        subtitle={solo ? 'The real line stays secret until the scoreboard.' : 'Hand it over — no peeking from the bench.'}
         footer={
           <PrimaryButton
-            title={solo ? 'Continue to audio clue' : `${player.name} has the phone — continue`}
+            title={solo ? 'Continue to audio clue' : `${player.name} has the phone — go!`}
             onPress={() => setPassConfirmed(true)}
             accessibilityLabel={solo ? 'Continue to audio clue' : `Confirm ${player.name} is holding the phone`}
           />
         }>
         {menuRow}
+        <View style={[styles.passCard, { borderColor: party.neonStroke }]}>
+          <Text style={styles.passArrow}>📲</Text>
+          <Text style={[styles.passName, { color: party.accentPop }]}>{player.name}</Text>
+          <Text style={[styles.passTitle, { color: party.accent2 }]}>{passTitle}</Text>
+        </View>
         <View style={[styles.card, { borderColor: party.neonStroke }]}>
           <Text style={styles.whisper}>No peeking</Text>
           <Text style={styles.en}>
             {solo
-              ? 'Keep the phrase to yourself until the scoreboard — treat it like a private practice run you can repeat with friends later.'
-              : 'Don’t read any English aloud yet. Everyone finds out the phrase at the scoreboard after all turns in this round.'}
+              ? 'Keep the phrase to yourself until the scoreboard.'
+              : 'No English read aloud yet — the phrase is revealed for everyone after the round.'}
           </Text>
         </View>
       </Screen>
     );
   }
 
-  const playIsPrimary =
-    !loadingTts && !isRecording && !phrasePlaybackBusy && listensRemaining > 0 && !hasListenedOnce;
-  const recordIsPrimary = !loadingTts && !isRecording && !phrasePlaybackBusy && hasListenedOnce && !hasRecording;
+  /** One morphing action button — the player always has exactly one obvious thing to tap. */
+  const step: 'loading' | 'play' | 'playing' | 'record' | 'recording' = loadingTts
+    ? 'loading'
+    : isRecording
+      ? 'recording'
+      : phrasePlaybackBusy
+        ? 'playing'
+        : !hasListenedOnce
+          ? 'play'
+          : 'record';
+
+  const mainButton =
+    step === 'loading'
+      ? { title: 'Loading…', onPress: () => {}, disabled: true }
+      : step === 'play'
+        ? { title: '▶  Play the clue', onPress: () => void onListen(), disabled: false }
+        : step === 'playing'
+          ? { title: 'Listening…', onPress: () => {}, disabled: true }
+          : step === 'record'
+            ? {
+                title: tooShort ? '●  Record again' : '●  Record your take',
+                onPress: () => void startRecording(),
+                disabled: !canStartRecord,
+              }
+            : { title: `■  Done (${seconds}s)`, onPress: () => void stopAndSubmit(), disabled: false };
+
+  const stepHint =
+    step === 'play'
+      ? 'Only you should hear this — hold the phone close.'
+      : step === 'recording'
+        ? 'Say it loud — tap Done when you finish.'
+        : step === 'record'
+          ? tooShort
+            ? 'That was too short — hold it for at least a second.'
+            : 'Your turn to speak. Replays are optional.'
+          : ' ';
 
   return (
     <Screen
       title={`${player.name}’s turn`}
-      subtitle={lang ? `${lang.label} · listen, then record, then submit` : 'Loading…'}
+      subtitle={lang ? `Mystery language: ${lang.label}` : 'Loading…'}
       footer={
         <View style={{ gap: 10 }}>
           {showSkip || micDenied ? (
@@ -370,17 +430,14 @@ function EchoBabelTurnScreen() {
             />
           ) : null}
           <PrimaryButton
-            title="Submit turn"
-            onPress={onSubmit}
-            disabled={!pendingRecordingUri || isRecording}
-            variant={pendingRecordingUri && !isRecording ? 'primary' : 'dim'}
-            accessibilityLabel="Submit turn for processing"
-            accessibilityState={{ selected: Boolean(pendingRecordingUri && !isRecording) }}
+            title={mainButton.title}
+            onPress={mainButton.onPress}
+            disabled={mainButton.disabled}
+            accessibilityLabel={mainButton.title}
           />
         </View>
       }>
       {menuRow}
-      <PlaybackSpeedSlider />
       {micDenied ? (
         <RecordingErrorBanner message="Microphone is off — turn it on so we can hear your attempt, or skip this turn." />
       ) : null}
@@ -398,55 +455,32 @@ function EchoBabelTurnScreen() {
         <ActivityIndicator color={party.accent} style={{ marginVertical: 24 }} />
       ) : !needsTranslationFix ? (
         <>
-          <ListenReplayCountdown
-            listensRemaining={listensRemaining}
-            caption={
-              listensRemaining <= 0
-                ? 'No replays left — record when you’re ready.'
-                : hasListenedOnce
-                  ? `You can replay up to ${listensRemaining} more time${listensRemaining === 1 ? '' : 's'}, or move on to record.`
-                  : `Tap Play below (${listensRemaining} time${listensRemaining === 1 ? '' : 's'}) — then Record your attempt.`
-            }
-          />
+          <View style={[styles.stepCard, { borderColor: party.neonStroke }]}>
+            <Text style={[styles.stepBig, { color: party.accentPop }]}>
+              {step === 'play'
+                ? 'Listen'
+                : step === 'playing'
+                  ? 'Listen…'
+                  : step === 'recording'
+                    ? `Recording · ${seconds}s`
+                    : 'Speak'}
+            </Text>
+            <Text style={styles.stepHintText}>{stepHint}</Text>
+          </View>
 
-          <PrimaryButton
-            title={
-              listensRemaining <= 0
-                ? 'No replays left'
-                : hasListenedOnce
-                  ? `Replay foreign phrase (${listensRemaining} left)`
-                  : '① Play foreign phrase'
-            }
-            onPress={() => void onListen()}
-            disabled={listensRemaining <= 0 || phrasePlaybackBusy || loadingTts}
-            variant={playIsPrimary ? 'primary' : 'dim'}
-            accessibilityLabel="Play foreign phrase audio"
-            accessibilityState={{ selected: playIsPrimary }}
-          />
-
-          <View style={{ height: 14 }} />
-
-          {!isRecording ? (
-            <PrimaryButton
-              title={hasRecording ? 'Re-record your attempt' : '② Record your attempt'}
-              onPress={() => void startRecording()}
-              disabled={!canStartRecord || phrasePlaybackBusy}
-              variant={recordIsPrimary ? 'primary' : 'dim'}
-              accessibilityLabel={hasRecording ? 'Re-record your attempt' : 'Record your attempt'}
-              accessibilityState={{ selected: recordIsPrimary }}
-            />
-          ) : (
+          {hasListenedOnce && listensRemaining > 0 && !isRecording ? (
             <Pressable
+              onPress={() => void onListen()}
+              disabled={phrasePlaybackBusy}
+              style={styles.replayLink}
+              hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Stop recording"
-              style={[styles.recordBtn, styles.recordActive]}
-              onPress={() => void stopRecording()}>
-              <Text style={styles.recordLabel}>■ Stop recording ({seconds}s)</Text>
+              accessibilityLabel="Replay the clue">
+              <Text style={[styles.replayLinkText, { color: party.accent2 }]}>
+                ↻ Replay the clue ({listensRemaining} left)
+              </Text>
             </Pressable>
-          )}
-          <Text style={styles.mutedSmall}>
-            Flow: listen at least once → record → submit. Extra replays optional.
-          </Text>
+          ) : null}
         </>
       ) : null}
     </Screen>
@@ -723,7 +757,6 @@ function ReverseTurnScreen() {
         </View>
       }>
       {menuRow}
-      <PlaybackSpeedSlider />
       {micDenied ? (
         <RecordingErrorBanner message="Microphone is off — enable it in Settings, or skip this turn so the party keeps moving." />
       ) : null}
@@ -890,5 +923,50 @@ const styles = StyleSheet.create({
     borderColor: Colors.party.danger,
     gap: 14,
     marginBottom: 16,
+  },
+  stepCard: {
+    backgroundColor: Colors.party.card,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 3,
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  stepBig: {
+    fontFamily: Font.titleHeavy,
+    fontSize: 34,
+    lineHeight: 42,
+    textAlign: 'center',
+  },
+  stepHintText: {
+    fontFamily: Font.body,
+    fontSize: 15,
+    lineHeight: 22,
+    color: Colors.party.textMuted,
+    textAlign: 'center',
+  },
+  replayLink: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 16 },
+  replayLinkText: { fontFamily: Font.bodyBold, fontSize: 15 },
+  passCard: {
+    backgroundColor: Colors.party.card,
+    borderRadius: 20,
+    padding: 26,
+    borderWidth: 3,
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 14,
+  },
+  passArrow: { fontSize: 40, marginBottom: 2 },
+  passName: {
+    fontFamily: Font.titleHeavy,
+    fontSize: 32,
+    lineHeight: 40,
+    textAlign: 'center',
+  },
+  passTitle: {
+    fontFamily: Font.bodyBold,
+    fontSize: 15,
+    textAlign: 'center',
   },
 });

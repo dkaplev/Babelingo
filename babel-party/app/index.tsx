@@ -68,8 +68,8 @@ export default function HomeScreen() {
       <PressStartPrompt onPress={startGame} />
       <ArcadeMenuPrompt
         onPress={openHowItWorks}
-        headline="▶ HOW IT WORKS"
-        tagline="RULES IN UNDER A MINUTE"
+        headline="How it works"
+        tagline="Rules in under a minute"
         accessibilityLabel="How it works"
       />
       {showTesterEntry ? (
@@ -79,11 +79,11 @@ export default function HomeScreen() {
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="Open tester or beta unlock code">
-          <Text style={styles.testerLink}>▸ TESTER / BETA CODE</Text>
+          <Text style={styles.testerLink}>Tester / beta code</Text>
           <Text style={styles.testerLinkSub}>tap to enter session unlock</Text>
         </Pressable>
       ) : null}
-      <Text style={styles.copyright}>© PARTY MODULE · NES MODE</Text>
+      <Text style={styles.copyright}>The party game of beautiful mistranslation</Text>
     </Screen>
   );
 }
@@ -146,8 +146,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   copyright: {
-    fontFamily: Font.title,
-    fontSize: 8,
+    fontFamily: Font.body,
+    fontSize: 12,
     color: Colors.party.textMuted,
     textAlign: 'center',
     marginTop: 8,

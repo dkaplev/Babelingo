@@ -20,6 +20,8 @@
     "logo:sample-bg": "node ./scripts/sample-title-png-bg.mjs"
   },
   "dependencies": {
+    "@expo-google-fonts/baloo-2": "^0.4.2",
+    "@expo-google-fonts/nunito": "^0.4.2",
     "@expo-google-fonts/press-start-2p": "^0.4.1",
     "@expo-google-fonts/silkscreen": "^0.4.2",
     "@react-native-async-storage/async-storage": "2.2.0",

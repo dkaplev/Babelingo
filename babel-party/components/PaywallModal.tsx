@@ -103,7 +103,7 @@ export function PaywallModal({ visible, triggerPoint, onClose, onUnlocked }: Pro
             ) : null}
             <Text style={styles.check}>✓ All 3 game modes</Text>
             <Text style={styles.check}>✓ Mayhem vibe</Text>
-            <Text style={styles.check}>✓ Up to 8 players + full 7 rounds (this session)</Text>
+            <Text style={styles.check}>✓ Up to 8 players + the full round arc (this session)</Text>
             <Text style={styles.price}>$3.99 for this session</Text>
             <Text style={styles.split}>Split 4 ways? That&apos;s less than a queueing drink.</Text>
             <Text style={styles.legal}>

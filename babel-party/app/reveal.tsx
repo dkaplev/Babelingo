@@ -1,17 +1,23 @@
 import { ChaosCounter } from '@/components/ChaosCounter';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { ShareModal } from '@/components/ShareModal';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { babelEnglishChainForRound } from '@/lib/sessionHighlights';
 import { useGameStore } from '@/lib/gameStore';
 import { normalizeTranslationText } from '@/lib/normalizeTranslation';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import * as Speech from 'expo-speech';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { TurnResult } from '@/lib/types';
+
+/** Chaos score that earns the rare “legendary moment” share banner. */
+const LEGENDARY_CHAOS = 90;
 
 const REVEAL_FLAVOR_LINES = [
   'The spirits have spoken.',
@@ -53,10 +59,32 @@ export default function RevealScreen() {
   const grantFunnyBonus = useGameStore((s) => s.grantFunnyBonus);
   const advanceAfterReveal = useGameStore((s) => s.advanceAfterReveal);
   const [flavorIdx, setFlavorIdx] = useState(() => Math.floor(Math.random() * REVEAL_FLAVOR_LINES.length));
+  const [shareOpen, setShareOpen] = useState(false);
 
   const revealKey = lastResult
     ? `${lastResult.playerId}-${lastResult.roundNumber}-${lastResult.phraseOriginal}`
     : '';
+
+  /** The phone reads the mangled English out loud — the reveal lands as a sound, not just text. */
+  useEffect(() => {
+    if (!revealKey || !lastResult || lastResult.turnSkipped) return;
+    const text = normalizeTranslationText(lastResult.reverseEnglish);
+    if (!text.trim()) return;
+    const chaos = lastResult.chaosScore ?? 0;
+    void Haptics.notificationAsync(
+      chaos >= LEGENDARY_CHAOS
+        ? Haptics.NotificationFeedbackType.Success
+        : Haptics.NotificationFeedbackType.Warning,
+    ).catch(() => {});
+    const id = setTimeout(() => {
+      Speech.speak(text, { language: 'en-US', volume: 1, pitch: 1, rate: 0.95 });
+    }, 600);
+    return () => {
+      clearTimeout(id);
+      Speech.stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revealKey]);
 
   const babelChain = useMemo(
     () =>
@@ -88,6 +116,7 @@ export default function RevealScreen() {
   }
 
   const onNext = () => {
+    Speech.stop();
     advanceAfterReveal();
     const { phase } = useGameStore.getState();
     trackEvent('reveal_next', { next_phase: phase });
@@ -95,6 +124,8 @@ export default function RevealScreen() {
     else if (phase === 'scoreboard') router.replace('/scoreboard');
     else router.replace('/summary');
   };
+
+  const isLegendary = !lastResult.turnSkipped && (lastResult.chaosScore ?? 0) >= LEGENDARY_CHAOS;
 
   return (
     <Screen
@@ -116,6 +147,22 @@ export default function RevealScreen() {
           <PrimaryButton title="Next" onPress={onNext} />
         </View>
       }>
+      <ShareModal visible={shareOpen} result={lastResult} onClose={() => setShareOpen(false)} />
+      {isLegendary ? (
+        <View style={styles.legendBanner}>
+          <Text style={styles.legendTitle}>🏆 LEGENDARY CHAOS</Text>
+          <Text style={styles.legendBody}>
+            Chaos {lastResult.chaosScore} — moments like this don't happen every game.
+          </Text>
+          <PrimaryButton
+            title="Share this legend"
+            onPress={() => {
+              trackEvent('share_moment_tap', { trigger: 'reveal_legendary' });
+              setShareOpen(true);
+            }}
+          />
+        </View>
+      ) : null}
       <Text style={styles.flavorLine} accessibilityLiveRegion="polite">
         {REVEAL_FLAVOR_LINES[flavorIdx]}
       </Text>
@@ -170,10 +217,6 @@ export default function RevealScreen() {
 
       <View style={styles.scoreRow}>
         <Text style={styles.scoreMain}>+{lastResult.totalTurnScore} pts</Text>
-        <Text style={styles.scoreSub}>
-          closeness {lastResult.closenessScore} · lang bonus {lastResult.languageBonus} · funny{' '}
-          {lastResult.funnyVoteBonus}
-        </Text>
       </View>
 
     </Screen>
@@ -223,7 +266,27 @@ const styles = StyleSheet.create({
     borderColor: Colors.party.neonStroke,
   },
   scoreMain: { fontFamily: Font.title, color: Colors.party.success, fontSize: 22 },
-  scoreSub: { fontFamily: Font.body, color: Colors.party.textMuted, marginTop: 8, fontSize: 14, lineHeight: 20 },
+  legendBanner: {
+    backgroundColor: Colors.party.surface2,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 3,
+    borderColor: Colors.party.podiumGold,
+    gap: 10,
+    marginBottom: 14,
+  },
+  legendTitle: {
+    fontFamily: Font.titleHeavy,
+    fontSize: 18,
+    color: Colors.party.podiumGold,
+    letterSpacing: 0.6,
+  },
+  legendBody: {
+    fontFamily: Font.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.party.textMuted,
+  },
   chainBox: {
     padding: 14,
     borderRadius: 16,

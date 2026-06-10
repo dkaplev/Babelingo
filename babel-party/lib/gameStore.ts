@@ -46,6 +46,8 @@ type GameState = {
   roundLanguages: string[];
   /** Phrase for each turn; repeats when a language is reused get a fresh phrase. */
   roundPhrases: Phrase[];
+  /** Round plan computed early (round-intro) so translations/TTS can be prefetched before the first turn. */
+  preparedRound: { round: number; order: string[]; languages: string[]; phrases: Phrase[] } | null;
   /** Reverse Audio: 1 = record backward guess after hearing target; 2 = record final English after hearing guess reversed. */
   reverseStep: 1 | 2;
   reverseGuessUri: string | null;
@@ -115,6 +117,56 @@ function assignLanguagesForRound(pool: string[], playerOrder: string[], history:
   return out;
 }
 
+/** Everything beginRound needs, computed ahead of time so round-intro can prefetch translations. */
+function computeRoundPlan(args: {
+  settings: RoomSettings;
+  currentRound: number;
+  results: TurnResult[];
+  playerOrder: string[];
+}): { order: string[]; languages: string[]; phrases: Phrase[] } {
+  const { settings, currentRound, results, playerOrder } = args;
+  const appGame = settings.appGame;
+  const stage = roundStageForGame(appGame, settings.gameMode, currentRound);
+  const order = currentRound === 1 ? playerOrder : shuffle(playerOrder);
+  const history = languageHistoryFromResults(results);
+  let codes: string[];
+  if (appGame === 'reverse_audio') {
+    codes = ['en'];
+  } else if (appGame === 'halloumi_mode') {
+    codes = ['el'];
+  } else if (settings.gameMode === 'mayhem') {
+    const mayhemBands: LanguageDifficultyBand[] = ['easy', 'moderate', 'hard'];
+    const band = mayhemBands[Math.floor(Math.random() * mayhemBands.length)]!;
+    codes = languageCodesForBands([band]);
+    if (codes.length === 0) codes = defaultLanguagePool();
+  } else {
+    codes = languageCodesForBands(stage.languageBands);
+    if (codes.length === 0) codes = defaultLanguagePool();
+  }
+  if (appGame === 'echo_translator' || appGame === 'babel_phone' || appGame === 'halloumi_mode') {
+    codes = excludeEnglishFromPool(codes);
+  }
+  let languages: string[];
+  let phrases: Phrase[];
+  if (appGame === 'reverse_audio') {
+    languages = order.map(() => 'en');
+    phrases = pickReverseRoundPhrases(order.length, stage.phraseMinWords, stage.phraseMaxWords);
+  } else if (appGame === 'halloumi_mode') {
+    // Greek-only, every player gets a distinct phrase every turn
+    languages = order.map(() => 'el');
+    phrases = pickDistinctPhrasesForWordRange(order.length, 'mixed', stage.phraseMinWords, stage.phraseMaxWords);
+  } else {
+    languages = assignLanguagesForRound(codes, order, history);
+    if (appGame === 'babel_phone') {
+      const seed = pickPhraseForWordRange('mixed', stage.phraseMinWords, stage.phraseMaxWords);
+      phrases = order.map(() => seed);
+    } else {
+      phrases = buildRoundPhrasesForStage(languages, stage);
+    }
+  }
+  return { order, languages, phrases };
+}
+
 /** First time each language appears in the round shares one phrase; later repeats get a new random phrase. */
 function buildRoundPhrasesForStage(roundLanguages: string[], stage: RoundStage): Phrase[] {
   if (!roundLanguages.length) return [];
@@ -140,7 +192,13 @@ export const useGameStore = create<
     startFromLobby: () => void;
     /** One atomic update: players + order + instructions phase (avoids empty order between two sets). */
     startSessionFromLobby: (names: string[]) => void;
+    /** Compute the round plan early (round-intro) so translations can be prefetched. Idempotent per round. */
+    prepareRound: () => { round: number; order: string[]; languages: string[]; phrases: Phrase[] } | null;
     beginRound: () => void;
+    /** Same crew, fresh scores — jump straight to round 1 without redoing setup. */
+    rematchSession: () => void;
+    /** Add one more round after the planned arc ends (summary “one more round”). */
+    startEncoreRound: () => void;
     nextListenConsumed: () => void;
     skipExtraPhrasePlays: () => void;
     setTranslation: (text: string, languageCode: string) => void;
@@ -173,6 +231,7 @@ export const useGameStore = create<
   funnyVotePending: false,
   roundLanguages: [],
   roundPhrases: [],
+  preparedRound: null,
   reverseStep: 1,
   reverseGuessUri: null,
 
@@ -194,9 +253,40 @@ export const useGameStore = create<
       funnyVotePending: false,
       roundLanguages: [],
       roundPhrases: [],
+      preparedRound: null,
       reverseStep: 1,
       reverseGuessUri: null,
     }),
+
+  rematchSession: () =>
+    set((s) => ({
+      players: s.players.map((p) => ({ ...p, totalScore: 0 })),
+      phase: 'round_intro',
+      currentRound: 1,
+      turnIndex: 0,
+      playerOrder: shuffle(s.players.map((p) => p.id)),
+      roundPhrase: null,
+      listensRemaining: MAX_PHRASE_PLAYS,
+      currentLanguageCode: null,
+      translatedText: null,
+      pendingRecordingUri: null,
+      lastResult: null,
+      results: [],
+      funnyVotePending: false,
+      roundLanguages: [],
+      roundPhrases: [],
+      preparedRound: null,
+      reverseStep: 1,
+      reverseGuessUri: null,
+    })),
+
+  startEncoreRound: () =>
+    set((s) => ({
+      settings: { ...s.settings, rounds: s.settings.rounds + 1 },
+      currentRound: s.currentRound + 1,
+      phase: 'round_intro',
+      preparedRound: null,
+    })),
 
   resetReverseTurn: () =>
     set({
@@ -285,6 +375,7 @@ export const useGameStore = create<
       roundPhrase: null,
       currentLanguageCode: null,
       translatedText: null,
+      preparedRound: null,
       reverseStep: 1,
       reverseGuessUri: null,
     });
@@ -316,70 +407,56 @@ export const useGameStore = create<
       roundPhrase: null,
       currentLanguageCode: null,
       translatedText: null,
+      preparedRound: null,
       reverseStep: 1,
       reverseGuessUri: null,
     });
   },
 
+  prepareRound: () => {
+    const { settings, currentRound, results, preparedRound } = get();
+    let { playerOrder, players } = get();
+    if (preparedRound && preparedRound.round === currentRound) return preparedRound;
+    if (playerOrder.length === 0 && players.length > 0) {
+      playerOrder = shuffle(players.map((p) => p.id));
+    }
+    if (playerOrder.length === 0) return null;
+    const plan = computeRoundPlan({ settings, currentRound, results, playerOrder });
+    const prepared = {
+      round: currentRound,
+      order: plan.order,
+      languages: plan.languages,
+      phrases: plan.phrases,
+    };
+    set({ preparedRound: prepared, playerOrder });
+    return prepared;
+  },
+
   beginRound: () => {
-    const { settings } = get();
+    const { settings, preparedRound } = get();
     let { playerOrder, currentRound, results, players } = get();
     if (playerOrder.length === 0 && players.length > 0) {
       playerOrder = shuffle(players.map((p) => p.id));
     }
     if (playerOrder.length === 0) return;
-    const appGame = settings.appGame;
-    const stage = roundStageForGame(appGame, settings.gameMode, currentRound);
-    const order = currentRound === 1 ? playerOrder : shuffle(playerOrder);
-    const history = languageHistoryFromResults(results);
-    let codes: string[];
-    if (appGame === 'reverse_audio') {
-      codes = ['en'];
-    } else if (appGame === 'halloumi_mode') {
-      codes = ['el'];
-    } else if (settings.gameMode === 'mayhem') {
-      const mayhemBands: LanguageDifficultyBand[] = ['easy', 'moderate', 'hard'];
-      const band = mayhemBands[Math.floor(Math.random() * mayhemBands.length)]!;
-      codes = languageCodesForBands([band]);
-      if (codes.length === 0) codes = defaultLanguagePool();
-    } else {
-      codes = languageCodesForBands(stage.languageBands);
-      if (codes.length === 0) codes = defaultLanguagePool();
-    }
-    if (appGame === 'echo_translator' || appGame === 'babel_phone' || appGame === 'halloumi_mode') {
-      codes = excludeEnglishFromPool(codes);
-    }
-    let roundLanguages: string[];
-    let roundPhrases: Phrase[];
-    if (appGame === 'reverse_audio') {
-      roundLanguages = order.map(() => 'en');
-      roundPhrases = pickReverseRoundPhrases(order.length, stage.phraseMinWords, stage.phraseMaxWords);
-    } else if (appGame === 'halloumi_mode') {
-      // Greek-only, every player gets a distinct phrase every turn
-      roundLanguages = order.map(() => 'el');
-      roundPhrases = pickDistinctPhrasesForWordRange(order.length, 'mixed', stage.phraseMinWords, stage.phraseMaxWords);
-    } else {
-      roundLanguages = assignLanguagesForRound(codes, order, history);
-      if (appGame === 'babel_phone') {
-        const seed = pickPhraseForWordRange('mixed', stage.phraseMinWords, stage.phraseMaxWords);
-        roundPhrases = order.map(() => seed);
-      } else {
-        roundPhrases = buildRoundPhrasesForStage(roundLanguages, stage);
-      }
-    }
+    const plan =
+      preparedRound && preparedRound.round === currentRound
+        ? { order: preparedRound.order, languages: preparedRound.languages, phrases: preparedRound.phrases }
+        : computeRoundPlan({ settings, currentRound, results, playerOrder });
     set({
       phase: 'turn',
-      roundPhrase: roundPhrases[0] ?? null,
+      roundPhrase: plan.phrases[0] ?? null,
       turnIndex: 0,
       listensRemaining: MAX_PHRASE_PLAYS,
-      currentLanguageCode: roundLanguages[0] ?? codes[0]!,
+      currentLanguageCode: plan.languages[0] ?? null,
       translatedText: null,
       pendingRecordingUri: null,
       lastResult: null,
       funnyVotePending: false,
-      playerOrder: order,
-      roundLanguages,
-      roundPhrases,
+      playerOrder: plan.order,
+      roundLanguages: plan.languages,
+      roundPhrases: plan.phrases,
+      preparedRound: null,
       reverseStep: 1,
       reverseGuessUri: null,
     });

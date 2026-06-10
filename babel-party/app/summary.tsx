@@ -16,6 +16,8 @@ import { StyleSheet, Text, View } from 'react-native';
 export default function SummaryScreen() {
   const router = useRouter();
   const resetSession = useGameStore((s) => s.resetSession);
+  const rematchSession = useGameStore((s) => s.rematchSession);
+  const startEncoreRound = useGameStore((s) => s.startEncoreRound);
   const players = useGameStore((s) => s.players);
   const results = useGameStore((s) => s.results);
   const settings = useGameStore((s) => s.settings);
@@ -83,11 +85,19 @@ export default function SummaryScreen() {
               />
             ) : null}
             <PrimaryButton
-              title="Play again"
+              title="One more round!"
               onPress={() => {
-                trackEvent('summary_replay');
-                resetSession();
-                router.replace('/game-mode');
+                trackEvent('summary_encore_round');
+                startEncoreRound();
+                router.replace('/round-intro');
+              }}
+            />
+            <PrimaryButton
+              title="Rematch — same crew"
+              onPress={() => {
+                trackEvent('summary_rematch');
+                rematchSession();
+                router.replace('/round-intro');
               }}
             />
             <PrimaryButton

@@ -50,30 +50,70 @@ async function translateMyMemory(text: string, pair: string): Promise<string | n
   return null;
 }
 
-/** EN → target with metadata for UI (retry / status banners). */
+/**
+ * In-memory cache of successful translations for the app session.
+ * Lets round-intro prefetch every turn's translation so turn start is instant (no spinner / dead air).
+ */
+const translationCache = new Map<string, TranslateEnResult>();
+const inflight = new Map<string, Promise<TranslateEnResult>>();
+
+function cacheKey(text: string, languageCode: string): string {
+  return `${languageCode}|${text}`;
+}
+
+/** EN → target with metadata for UI (retry / status banners). Successful results are cached per session. */
 export async function translateEnToWithMeta(text: string, languageCode: string): Promise<TranslateEnResult> {
-  if (languageCode === 'en') {
-    return { text: normalizeTranslationText(text), source: 'backend' };
-  }
-  const lang = languageByCode(languageCode);
-  const target = lang?.myMemoryCode ?? languageCode;
-  const hadBackendConfigured = Boolean(apiBase());
+  const key = cacheKey(text, languageCode);
+  const cached = translationCache.get(key);
+  if (cached) return cached;
+  const pending = inflight.get(key);
+  if (pending) return pending;
 
-  const fromBackend = await translateViaBackend(text, 'en', target);
-  if (fromBackend) return { text: fromBackend, source: 'backend' };
+  const work = (async (): Promise<TranslateEnResult> => {
+    if (languageCode === 'en') {
+      return { text: normalizeTranslationText(text), source: 'backend' };
+    }
+    const lang = languageByCode(languageCode);
+    const target = lang?.myMemoryCode ?? languageCode;
+    const hadBackendConfigured = Boolean(apiBase());
 
-  const fromMm = await translateMyMemory(text, `en|${target}`);
-  if (fromMm) {
+    const fromBackend = await translateViaBackend(text, 'en', target);
+    if (fromBackend) return { text: fromBackend, source: 'backend' };
+
+    const fromMm = await translateMyMemory(text, `en|${target}`);
+    if (fromMm) {
+      return {
+        text: fromMm,
+        source: hadBackendConfigured ? 'mymemory_fallback' : 'mymemory',
+      };
+    }
+
     return {
-      text: fromMm,
-      source: hadBackendConfigured ? 'mymemory_fallback' : 'mymemory',
+      text: `[${languageCode.toUpperCase()}] ${text}`,
+      source: 'offline',
     };
-  }
+  })();
 
-  return {
-    text: `[${languageCode.toUpperCase()}] ${text}`,
-    source: 'offline',
-  };
+  inflight.set(key, work);
+  try {
+    const result = await work;
+    if (result.source !== 'offline') translationCache.set(key, result);
+    return result;
+  } finally {
+    inflight.delete(key);
+  }
+}
+
+/**
+ * Fire-and-forget warm-up for a batch of (phrase, language) pairs — used by round-intro
+ * so every turn's translation is already cached when the phone reaches the player.
+ */
+export function prefetchTranslations(pairs: { text: string; languageCode: string }[]): void {
+  for (const p of pairs) {
+    const key = cacheKey(p.text, p.languageCode);
+    if (translationCache.has(key) || inflight.has(key)) continue;
+    void translateEnToWithMeta(p.text, p.languageCode).catch(() => {});
+  }
 }
 
 /**

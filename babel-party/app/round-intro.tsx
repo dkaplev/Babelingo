@@ -10,8 +10,9 @@ import { useGameStore } from '@/lib/gameStore';
 import { hasSeenHowToForMode, markHowToSeenForMode } from '@/lib/onboarding';
 import { roundStageForGame } from '@/lib/progression';
 import { funniestResultInRound } from '@/lib/sessionHighlights';
+import { prefetchTranslations } from '@/lib/translate';
 import { useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function RoundIntroScreen() {
@@ -20,16 +21,30 @@ export default function RoundIntroScreen() {
   const currentRound = useGameStore((s) => s.currentRound);
   const gameMode = useGameStore((s) => s.settings.gameMode);
   const appGame = useGameStore((s) => s.settings.appGame);
-  const players = useGameStore((s) => s.players);
   const results = useGameStore((s) => s.results);
   const totalRounds = useGameStore((s) => s.settings.rounds);
   const beginRound = useGameStore((s) => s.beginRound);
-  const soloMode = players.length === 1;
+  const prepareRound = useGameStore((s) => s.prepareRound);
+
+  /** Plan the round now and warm every turn's translation — so no one stares at a spinner mid-party. */
+  useEffect(() => {
+    const prepared = prepareRound();
+    if (!prepared) return;
+    prefetchTranslations(
+      prepared.phrases.map((p, i) => ({ text: p.text, languageCode: prepared.languages[i] ?? 'es' })),
+    );
+  }, [prepareRound, currentRound]);
 
   const stage = roundStageForGame(appGame, gameMode, currentRound);
   const modeLabel = gameMode === 'mayhem' ? 'Mayhem' : 'Regular';
   const gameTitle =
-    appGame === 'babel_phone' ? 'Babel Phone' : appGame === 'reverse_audio' ? 'Reverse Audio' : 'Echo Translator';
+    appGame === 'babel_phone'
+      ? 'Babel Phone'
+      : appGame === 'reverse_audio'
+        ? 'Reverse Audio'
+        : appGame === 'halloumi_mode'
+          ? 'Halloumi Mode'
+          : 'Echo Translator';
 
   const prevRoundMvp = useMemo(() => {
     if (currentRound <= 1) return null;
@@ -104,72 +119,24 @@ export default function RoundIntroScreen() {
 
       {currentRound === 1 ? (
         <View style={styles.rules}>
-          <Text style={[styles.rulesTitle, { color: party.accent2 }]}>Quick rules</Text>
-          {soloMode && appGame === 'reverse_audio' ? (
+          <Text style={[styles.rulesTitle, { color: party.accent2 }]}>How to play</Text>
+          {appGame === 'reverse_audio' ? (
             <>
-              <Text style={styles.rule}>
-                ① Very short English line (4–5 words) each round — text stays hidden until the scoreboard.
-              </Text>
-              <Text style={styles.rule}>
-                ② Hear the backward clue, mimic it, then hear your clip reversed the right way round — record the real
-                phrase.
-              </Text>
-              <Text style={styles.rule}>
-                ③ Arcade practice: beat your last closeness score, or switch to multi-player when friends arrive.
-              </Text>
-            </>
-          ) : soloMode && appGame === 'babel_phone' ? (
-            <>
-              <Text style={styles.rule}>
-                ① One turn per round: you hear a non-English clue, record once — the scoreboard shows how the English
-                chain shifted in one hop.
-              </Text>
-              <Text style={styles.rule}>② Seed phrase stays secret until the round ends — no reading it aloud early.</Text>
-              <Text style={styles.rule}>
-                ③ Try for a tight translation or lean into silly sounds; either way you get a chain to laugh at.
-              </Text>
-            </>
-          ) : soloMode ? (
-            <>
-              <Text style={styles.rule}>
-                ① One turn per round: foreign audio only, then your recording — the answer phrase unlocks at the
-                scoreboard.
-              </Text>
-              <Text style={styles.rule}>② Replay the foreign clip if you need another listen — then record your mimic.</Text>
-              <Text style={styles.rule}>③ Chase higher closeness scores across rounds or use it as quiet rehearsal.</Text>
-              <Text style={styles.rule}>
-                ④ Go back to create-room and use the group player count when you want pass-the-phone chaos.
-              </Text>
-            </>
-          ) : appGame === 'reverse_audio' ? (
-            <>
-              <Text style={styles.rule}>
-                ① Every player gets a different short line (4–5 words) in the same round — so a reveal never spoils the
-                next turn.
-              </Text>
-              <Text style={styles.rule}>
-                ② Pass the phone — backward clue, mimic, hear your clip reversed at normal speed, then record the real
-                phrase.
-              </Text>
-              <Text style={styles.rule}>③ All answers show on the scoreboard after the round.</Text>
+              <Text style={styles.rule}>① Hear a backward clue.</Text>
+              <Text style={styles.rule}>② Mimic it, then say the real phrase.</Text>
+              <Text style={styles.rule}>③ Answers revealed after the round.</Text>
             </>
           ) : appGame === 'babel_phone' ? (
             <>
-              <Text style={styles.rule}>
-                ① Only the active player hears a non-English foreign line; English is the chain language only — nobody
-                reads it aloud until the round ends.
-              </Text>
-              <Text style={styles.rule}>
-                ② Each turn the next English line is whatever came back from the last recording — telephone through
-                languages.
-              </Text>
-              <Text style={styles.rule}>③ After the round, the scoreboard shows the full English mutation chain.</Text>
+              <Text style={styles.rule}>① Hear a foreign line — keep it secret.</Text>
+              <Text style={styles.rule}>② Say what you heard, pass the phone.</Text>
+              <Text style={styles.rule}>③ Watch English mutate through the chain.</Text>
             </>
           ) : (
             <>
-              <Text style={styles.rule}>① Pass the phone — only the player hears the foreign audio clue.</Text>
-              <Text style={styles.rule}>② Play the clue, mimic, record, submit — replay the phrase if you need another listen.</Text>
-              <Text style={styles.rule}>③ The shared English line is revealed for the room after the whole round.</Text>
+              <Text style={styles.rule}>① Hear a foreign phrase.</Text>
+              <Text style={styles.rule}>② Say it back as best you can.</Text>
+              <Text style={styles.rule}>③ Laugh at what the phone thinks you said.</Text>
             </>
           )}
         </View>

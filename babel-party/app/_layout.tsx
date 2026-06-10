@@ -1,5 +1,5 @@
-import { PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
-import { Silkscreen_400Regular, Silkscreen_700Bold } from '@expo-google-fonts/silkscreen';
+import { Baloo2_700Bold, Baloo2_800ExtraBold } from '@expo-google-fonts/baloo-2';
+import { Nunito_500Medium, Nunito_700Bold } from '@expo-google-fonts/nunito';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -34,9 +34,10 @@ const navTheme = {
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    PressStart2P_400Regular,
-    Silkscreen_400Regular,
-    Silkscreen_700Bold,
+    Baloo2_700Bold,
+    Baloo2_800ExtraBold,
+    Nunito_500Medium,
+    Nunito_700Bold,
   });
 
   useEffect(() => {
@@ -85,7 +86,6 @@ export default function RootLayout() {
           <Stack.Screen name="demo" />
           <Stack.Screen name="pick-game" />
           <Stack.Screen name="how-it-works" />
-          <Stack.Screen name="game-mode" />
           <Stack.Screen name="create-room" />
           <Stack.Screen name="lobby" />
           <Stack.Screen name="instructions" />

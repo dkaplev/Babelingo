@@ -8,8 +8,8 @@ export function PressStartPrompt(props: Props) {
   return (
     <ArcadeMenuPrompt
       {...props}
-      headline="▶ PRESS START"
-      tagline="ANY CREW SIZE · ONE PHONE"
+      headline="Tap to play"
+      tagline="Any crew size · one phone"
       accessibilityLabel="Start game"
     />
   );

@@ -1,23 +1,29 @@
 import { Font } from '@/constants/Typography';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 
 type Props = {
   onPress: () => void;
-  /** Main blinking line (e.g. ▶ PRESS START) */
+  /** Main line (e.g. Tap to play) */
   headline: string;
   /** Smaller static line under the headline */
   tagline: string;
   accessibilityLabel: string;
 };
 
-/** NES-style bordered prompt — shared by home “Press start” and “How it works”. */
+/** Big bordered menu prompt with a gentle pulse — shared by home "Tap to play" and "How it works". */
 export function ArcadeMenuPrompt({ onPress, headline, tagline, accessibilityLabel }: Props) {
-  const [on, setOn] = useState(true);
+  const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    const id = setInterval(() => setOn((v) => !v), 520);
-    return () => clearInterval(id);
-  }, []);
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.03, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
   return (
     <Pressable
       accessibilityRole="button"
@@ -25,10 +31,10 @@ export function ArcadeMenuPrompt({ onPress, headline, tagline, accessibilityLabe
       onPress={onPress}
       style={({ pressed }) => [styles.hit, pressed && styles.hitPressed]}
       hitSlop={12}>
-      <View style={styles.wrap}>
-        <Text style={[styles.line, { opacity: on ? 1 : 0.28 }]}>{headline}</Text>
+      <Animated.View style={[styles.wrap, { transform: [{ scale: pulse }] }]}>
+        <Text style={styles.line}>{headline}</Text>
         <Text style={styles.sub}>{tagline}</Text>
-      </View>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -40,16 +46,16 @@ const styles = StyleSheet.create({
     minHeight: 88,
     justifyContent: 'center',
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 18,
     borderWidth: 2,
     borderColor: 'rgba(72, 214, 210, 0.55)',
     backgroundColor: 'rgba(26, 27, 75, 0.65)',
   },
   hitPressed: { opacity: 0.85 },
-  wrap: { alignItems: 'center', gap: 6 },
+  wrap: { alignItems: 'center', gap: 4 },
   line: {
-    fontFamily: Font.title,
-    fontSize: 14,
+    fontFamily: Font.titleHeavy,
+    fontSize: 24,
     color: '#f9c46b',
     letterSpacing: 0.5,
   },
