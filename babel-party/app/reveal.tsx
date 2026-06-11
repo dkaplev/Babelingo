@@ -1,7 +1,6 @@
-import { ChaosCounter } from '@/components/ChaosCounter';
+import { AccuracyMeter } from '@/components/AccuracyMeter';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
-import { ShareModal } from '@/components/ShareModal';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
@@ -15,9 +14,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { TurnResult } from '@/lib/types';
-
-/** Chaos score that earns the rare “legendary moment” share banner. */
-const LEGENDARY_CHAOS = 90;
 
 const REVEAL_FLAVOR_LINES = [
   'The spirits have spoken.',
@@ -41,7 +37,7 @@ function mockSttExplanation(r: TurnResult): string {
       return 'The clip was not valid WAV for Google STT, so a phrase stand-in was used. If this keeps happening, report it (iOS recording should be linear PCM WAV).';
     case 'google_stt_no_result':
       return hasHeard
-        ? 'Google STT did not return usable text this time (quiet mic, background noise, very short clip, or API hiccup). “Heard” below is a stand-in from the target phrase — try speaking a bit louder and longer.'
+        ? 'Google STT did not return usable text this time (quiet mic, background noise, very short clip, or API hiccup). "Heard" below is a stand-in from the target phrase — try speaking a bit louder and longer.'
         : 'Google STT did not return usable text; scoring used a fallback.';
     default:
       return hasHeard
@@ -59,7 +55,6 @@ export default function RevealScreen() {
   const grantFunnyBonus = useGameStore((s) => s.grantFunnyBonus);
   const advanceAfterReveal = useGameStore((s) => s.advanceAfterReveal);
   const [flavorIdx, setFlavorIdx] = useState(() => Math.floor(Math.random() * REVEAL_FLAVOR_LINES.length));
-  const [shareOpen, setShareOpen] = useState(false);
 
   const revealKey = lastResult
     ? `${lastResult.playerId}-${lastResult.roundNumber}-${lastResult.phraseOriginal}`
@@ -70,11 +65,13 @@ export default function RevealScreen() {
     if (!revealKey || !lastResult || lastResult.turnSkipped) return;
     const text = normalizeTranslationText(lastResult.reverseEnglish);
     if (!text.trim()) return;
-    const chaos = lastResult.chaosScore ?? 0;
+    const closeness = lastResult.closenessScore;
     void Haptics.notificationAsync(
-      chaos >= LEGENDARY_CHAOS
+      closeness >= 3
         ? Haptics.NotificationFeedbackType.Success
-        : Haptics.NotificationFeedbackType.Warning,
+        : closeness >= 2
+          ? Haptics.NotificationFeedbackType.Warning
+          : Haptics.NotificationFeedbackType.Error,
     ).catch(() => {});
     const id = setTimeout(() => {
       Speech.speak(text, { language: 'en-US', volume: 1, pitch: 1, rate: 0.95 });
@@ -125,8 +122,6 @@ export default function RevealScreen() {
     else router.replace('/summary');
   };
 
-  const isLegendary = !lastResult.turnSkipped && (lastResult.chaosScore ?? 0) >= LEGENDARY_CHAOS;
-
   return (
     <Screen
       title="The reveal"
@@ -147,22 +142,6 @@ export default function RevealScreen() {
           <PrimaryButton title="Next" onPress={onNext} />
         </View>
       }>
-      <ShareModal visible={shareOpen} result={lastResult} onClose={() => setShareOpen(false)} />
-      {isLegendary ? (
-        <View style={styles.legendBanner}>
-          <Text style={styles.legendTitle}>🏆 LEGENDARY CHAOS</Text>
-          <Text style={styles.legendBody}>
-            Chaos {lastResult.chaosScore} — moments like this don't happen every game.
-          </Text>
-          <PrimaryButton
-            title="Share this legend"
-            onPress={() => {
-              trackEvent('share_moment_tap', { trigger: 'reveal_legendary' });
-              setShareOpen(true);
-            }}
-          />
-        </View>
-      ) : null}
       <Text style={styles.flavorLine} accessibilityLiveRegion="polite">
         {REVEAL_FLAVOR_LINES[flavorIdx]}
       </Text>
@@ -189,7 +168,7 @@ export default function RevealScreen() {
       </View>
 
       {lastResult.turnSkipped ? null : (
-        <ChaosCounter variant="hero" score={lastResult.chaosScore ?? 0} />
+        <AccuracyMeter score={lastResult.closenessScore} languageBonus={lastResult.languageBonus} />
       )}
 
       {babelChain.length > 1 ? (
@@ -218,7 +197,6 @@ export default function RevealScreen() {
       <View style={styles.scoreRow}>
         <Text style={styles.scoreMain}>+{lastResult.totalTurnScore} pts</Text>
       </View>
-
     </Screen>
   );
 }
@@ -266,27 +244,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.party.neonStroke,
   },
   scoreMain: { fontFamily: Font.title, color: Colors.party.success, fontSize: 22 },
-  legendBanner: {
-    backgroundColor: Colors.party.surface2,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 3,
-    borderColor: Colors.party.podiumGold,
-    gap: 10,
-    marginBottom: 14,
-  },
-  legendTitle: {
-    fontFamily: Font.titleHeavy,
-    fontSize: 18,
-    color: Colors.party.podiumGold,
-    letterSpacing: 0.6,
-  },
-  legendBody: {
-    fontFamily: Font.body,
-    fontSize: 14,
-    lineHeight: 20,
-    color: Colors.party.textMuted,
-  },
   chainBox: {
     padding: 14,
     borderRadius: 16,

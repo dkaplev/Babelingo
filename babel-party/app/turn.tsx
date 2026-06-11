@@ -321,7 +321,7 @@ function EchoBabelTurnScreen() {
     try {
       await recording.stopAndUnloadAsync();
       uri = recording.getURI();
-      setRecordingUri(uri);
+      setRecordingUri(uri, elapsed);
     } finally {
       setRecording(null);
       setIsRecording(false);
@@ -655,7 +655,7 @@ function ReverseTurnScreen() {
         if (reverseStep === 1) {
           commitReverseGuess(uri);
         } else {
-          setRecordingUri(uri);
+          setRecordingUri(uri, elapsed);
         }
       }
       if (elapsed < 1) setShowSkip(true);

@@ -39,6 +39,8 @@ type GameState = {
   currentLanguageCode: string | null;
   translatedText: string | null;
   pendingRecordingUri: string | null;
+  /** Seconds recorded on the current turn — used to decide replay-during-processing. */
+  pendingRecordingDurationSec: number | null;
   lastResult: TurnResult | null;
   results: TurnResult[];
   funnyVotePending: boolean;
@@ -202,7 +204,7 @@ export const useGameStore = create<
     nextListenConsumed: () => void;
     skipExtraPhrasePlays: () => void;
     setTranslation: (text: string, languageCode: string) => void;
-    setRecordingUri: (uri: string | null) => void;
+    setRecordingUri: (uri: string | null, durationSec?: number | null) => void;
     setPhase: (p: SessionPhase) => void;
     commitTurnResult: (r: TurnResult) => void;
     grantFunnyBonus: () => void;
@@ -226,6 +228,7 @@ export const useGameStore = create<
   currentLanguageCode: null,
   translatedText: null,
   pendingRecordingUri: null,
+  pendingRecordingDurationSec: null,
   lastResult: null,
   results: [],
   funnyVotePending: false,
@@ -248,6 +251,7 @@ export const useGameStore = create<
       currentLanguageCode: null,
       translatedText: null,
       pendingRecordingUri: null,
+      pendingRecordingDurationSec: null,
       lastResult: null,
       results: [],
       funnyVotePending: false,
@@ -270,6 +274,7 @@ export const useGameStore = create<
       currentLanguageCode: null,
       translatedText: null,
       pendingRecordingUri: null,
+      pendingRecordingDurationSec: null,
       lastResult: null,
       results: [],
       funnyVotePending: false,
@@ -294,6 +299,7 @@ export const useGameStore = create<
       reverseGuessUri: null,
       listensRemaining: MAX_PHRASE_PLAYS,
       pendingRecordingUri: null,
+      pendingRecordingDurationSec: null,
     }),
 
   commitReverseGuess: (uri) =>
@@ -302,6 +308,7 @@ export const useGameStore = create<
       reverseStep: 2,
       listensRemaining: MAX_PHRASE_PLAYS,
       pendingRecordingUri: null,
+      pendingRecordingDurationSec: null,
     }),
 
   commitSkippedTurn: () =>
@@ -337,6 +344,7 @@ export const useGameStore = create<
         results: [...s.results, r],
         funnyVotePending: false,
         pendingRecordingUri: null,
+        pendingRecordingDurationSec: null,
       };
     }),
 
@@ -368,6 +376,7 @@ export const useGameStore = create<
       listensRemaining: MAX_PHRASE_PLAYS,
       lastResult: null,
       pendingRecordingUri: null,
+      pendingRecordingDurationSec: null,
       results: [],
       funnyVotePending: false,
       roundLanguages: [],
@@ -400,6 +409,7 @@ export const useGameStore = create<
       listensRemaining: MAX_PHRASE_PLAYS,
       lastResult: null,
       pendingRecordingUri: null,
+      pendingRecordingDurationSec: null,
       results: [],
       funnyVotePending: false,
       roundLanguages: [],
@@ -451,6 +461,7 @@ export const useGameStore = create<
       currentLanguageCode: plan.languages[0] ?? null,
       translatedText: null,
       pendingRecordingUri: null,
+      pendingRecordingDurationSec: null,
       lastResult: null,
       funnyVotePending: false,
       playerOrder: plan.order,
@@ -472,7 +483,11 @@ export const useGameStore = create<
   setTranslation: (text, languageCode) =>
     set({ translatedText: text, currentLanguageCode: languageCode }),
 
-  setRecordingUri: (uri) => set({ pendingRecordingUri: uri }),
+  setRecordingUri: (uri, durationSec) =>
+    set({
+      pendingRecordingUri: uri,
+      pendingRecordingDurationSec: uri ? (durationSec ?? null) : null,
+    }),
 
   setPhase: (p) => set({ phase: p }),
 
@@ -539,6 +554,7 @@ export const useGameStore = create<
         roundPhrase: nextPhrase,
         translatedText: null,
         pendingRecordingUri: null,
+        pendingRecordingDurationSec: null,
         lastResult: null,
         phase: 'turn',
         funnyVotePending: false,

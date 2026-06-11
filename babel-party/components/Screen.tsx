@@ -1,5 +1,5 @@
 import { usePartyPalette } from '@/components/GameThemeProvider';
-import { NesBackground } from '@/components/NesBackground';
+import { PartyBackground } from '@/components/PartyBackground';
 import { Font } from '@/constants/Typography';
 import { getPartyPalette } from '@/lib/partyPalette';
 import { ReactNode } from 'react';
@@ -37,7 +37,7 @@ export function Screen(props: {
   const ctxParty = usePartyPalette();
   const party = neutralChrome ? getPartyPalette('echo_translator') : ctxParty;
   const rootBg = backdropColor ?? party.surface;
-  const scrim = overlayColor ?? 'rgba(26, 27, 75, 0.88)';
+  const scrim = overlayColor ?? 'rgba(26, 27, 75, 0.78)';
   const showArcade = decoration === 'arcade';
   const scroll = (
     <ScrollView
@@ -67,7 +67,7 @@ export function Screen(props: {
     <View style={[styles.root, { backgroundColor: rootBg }]}>
       {showArcade ? (
         <>
-          <NesBackground baseColor={rootBg} />
+          <PartyBackground baseColor={rootBg} />
           <View style={[styles.bgOverlay, { backgroundColor: scrim }]} pointerEvents="none" />
         </>
       ) : null}

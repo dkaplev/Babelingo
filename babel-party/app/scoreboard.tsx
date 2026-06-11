@@ -1,3 +1,4 @@
+import { ChaosCounter } from '@/components/ChaosCounter';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { ShareModal } from '@/components/ShareModal';
@@ -5,6 +6,7 @@ import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
 import { useGameStore } from '@/lib/gameStore';
+import { CHAOS_AWARD_THRESHOLD } from '@/lib/recordingPlayback';
 import {
   babelEnglishChainForRound,
   reverseAnswerLinesForRound,
@@ -12,9 +14,13 @@ import {
   topScorersInRound,
 } from '@/lib/sessionHighlights';
 import { computeTeamTotals } from '@/lib/teamScores';
+import { normalizeTranslationText } from '@/lib/normalizeTranslation';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+
+/** Chaos score that earns the rare “legendary moment” share banner. */
+const LEGENDARY_CHAOS = 90;
 
 export default function ScoreboardScreen() {
   const router = useRouter();
@@ -26,9 +32,15 @@ export default function ScoreboardScreen() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
   const sorted = [...players].sort((a, b) => b.totalScore - a.totalScore);
-  const sessionHighChaos = useMemo(
-    () => Math.max(0, ...results.map((r) => r.chaosScore ?? 0)),
-    [results],
+  const chaoticTurns = useMemo(
+    () =>
+      results.filter(
+        (r) =>
+          !r.turnSkipped &&
+          r.roundNumber === currentRound &&
+          (r.chaosScore ?? 0) >= CHAOS_AWARD_THRESHOLD,
+      ),
+    [results, currentRound],
   );
   const teamTotals = useMemo(() => computeTeamTotals(players), [players]);
   const roundLeaders = useMemo(() => topScorersInRound(results, currentRound), [results, currentRound]);
@@ -57,11 +69,11 @@ export default function ScoreboardScreen() {
 
   const funniest = useMemo(
     () =>
-      [...results.filter((r) => !r.turnSkipped && r.roundNumber === currentRound)].sort(
-        (a, b) => (b.chaosScore ?? 0) - (a.chaosScore ?? 0),
-      )[0] ?? null,
-    [results, currentRound],
+      [...chaoticTurns].sort((a, b) => (b.chaosScore ?? 0) - (a.chaosScore ?? 0))[0] ?? null,
+    [chaoticTurns],
   );
+
+  const isLegendary = funniest != null && (funniest.chaosScore ?? 0) >= LEGENDARY_CHAOS;
 
   return (
     <>
@@ -132,10 +144,26 @@ export default function ScoreboardScreen() {
         </View>
       ) : null}
 
-      {sessionHighChaos > 0 ? (
-        <View style={styles.chaosSessionBanner}>
-          <Text style={styles.chaosSessionTitle}>Session chaos high</Text>
-          <Text style={styles.chaosSessionNum}>{sessionHighChaos}</Text>
+      {chaoticTurns.length > 0 ? (
+        <View style={styles.chaosRoundBanner}>
+          <Text style={styles.chaosRoundTitle}>Chaos awards — round {currentRound}</Text>
+          <Text style={styles.chaosRoundSub}>
+            The wildest mangled phrases this round — saved for the scoreboard, not mid-turn.
+          </Text>
+          {chaoticTurns.map((r) => (
+            <View key={`${r.playerId}-${r.turnOrderInRound}`} style={styles.chaosRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.chaosName}>{r.playerName}</Text>
+                <Text style={styles.chaosQuote} numberOfLines={2}>
+                  "{normalizeTranslationText(r.reverseEnglish)}"
+                </Text>
+              </View>
+              <ChaosCounter variant="compact" score={r.chaosScore ?? 0} />
+            </View>
+          ))}
+          {isLegendary ? (
+            <Text style={styles.legendTag}>🏆 Legendary chaos — share-worthy moment</Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -306,28 +334,55 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
   },
-  chaosSessionBanner: {
+  chaosRoundBanner: {
     backgroundColor: Colors.party.card,
     borderRadius: 16,
     padding: 14,
     marginBottom: 14,
     borderWidth: 2,
     borderColor: Colors.party.accentPop,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 10,
   },
-  chaosSessionTitle: {
+  chaosRoundTitle: {
     fontFamily: Font.bodyBold,
     fontSize: 12,
     color: Colors.party.accentPop,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  chaosSessionNum: {
-    fontFamily: Font.title,
-    fontSize: 28,
-    color: Colors.party.accentPop,
+  chaosRoundSub: {
+    fontFamily: Font.body,
+    fontSize: 14,
+    lineHeight: 21,
+    color: Colors.party.textMuted,
+    marginBottom: 4,
+  },
+  chaosRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.party.borderSubtle,
+  },
+  chaosName: {
+    fontFamily: Font.bodyBold,
+    fontSize: 15,
+    color: Colors.party.text,
+    marginBottom: 4,
+  },
+  chaosQuote: {
+    fontFamily: Font.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.party.textMuted,
+    fontStyle: 'italic',
+  },
+  legendTag: {
+    fontFamily: Font.bodyBold,
+    fontSize: 13,
+    color: Colors.party.podiumGold,
+    marginTop: 4,
   },
   list: { gap: 10 },
   row: {

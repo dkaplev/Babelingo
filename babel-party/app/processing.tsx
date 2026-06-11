@@ -3,13 +3,15 @@ import { Screen } from '@/components/Screen';
 import Colors from '@/constants/Colors';
 import { Font } from '@/constants/Typography';
 import { trackEvent } from '@/lib/analytics';
-import { audioModePlaybackSpeaker } from '@/lib/audioMode';
 import { currentPlayer, useGameStore } from '@/lib/gameStore';
 import { languageByCode } from '@/lib/languages';
 import { buildSoloBabelDisplayChain } from '@/lib/babelSoloChain';
 import { runEchoPipeline, runReversePipeline } from '@/lib/pipeline';
+import {
+  playRecordingToCompletion,
+  shouldReplayRecordingDuringProcessing,
+} from '@/lib/recordingPlayback';
 import type { TurnResult } from '@/lib/types';
-import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -26,36 +28,8 @@ export default function ProcessingScreen() {
   const ran = useRef(false);
   const [line] = useState(() => COPY[Math.floor(Math.random() * COPY.length)]!);
   const [timedOut, setTimedOut] = useState(false);
-  const replaySound = useRef<Audio.Sound | null>(null);
-
-  /**
-   * Party moment: while the server works, play the player's attempt out loud
-   * so the whole room hears the gibberish — kills the silent wait.
-   */
-  useEffect(() => {
-    const uri = useGameStore.getState().pendingRecordingUri;
-    if (!uri) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        await audioModePlaybackSpeaker();
-        const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true, volume: 1 });
-        if (cancelled) {
-          await sound.unloadAsync();
-          return;
-        }
-        replaySound.current = sound;
-      } catch {
-        /* non-fatal — the wait just stays quiet */
-      }
-    })();
-    return () => {
-      cancelled = true;
-      const s = replaySound.current;
-      replaySound.current = null;
-      if (s) void s.unloadAsync().catch(() => {});
-    };
-  }, []);
+  const durationSec = useGameStore((s) => s.pendingRecordingDurationSec);
+  const willReplay = shouldReplayRecordingDuringProcessing(durationSec);
 
   useEffect(() => {
     if (ran.current) return;
@@ -68,6 +42,7 @@ export default function ProcessingScreen() {
       const langCode = store.currentLanguageCode;
       const trans = store.translatedText;
       const recUri = store.pendingRecordingUri;
+      const replay = Boolean(recUri && shouldReplayRecordingDuringProcessing(store.pendingRecordingDurationSec));
 
       if (!player || !phrase || !langCode) {
         useGameStore.getState().resetSession();
@@ -77,19 +52,25 @@ export default function ProcessingScreen() {
       const lang = languageByCode(langCode);
       const started = Date.now();
       const appGame = store.settings.appGame;
-      const out =
+
+      const pipelinePromise =
         appGame === 'reverse_audio'
-          ? await runReversePipeline({
+          ? runReversePipeline({
               recordingUri: recUri,
               originalEnglish: phrase.text,
             })
-          : await runEchoPipeline({
+          : runEchoPipeline({
               recordingUri: recUri,
               originalEnglish: phrase.text,
               translatedForeign: trans ?? '',
               languageCode: langCode,
               category: phrase.category,
             });
+
+      const out = replay && recUri
+        ? (await Promise.all([pipelinePromise, playRecordingToCompletion(recUri)]))[0]!
+        : await pipelinePromise;
+
       trackEvent('round_processing_done', {
         latency_ms: Date.now() - started,
         mock: out.usedMockPipeline,
@@ -97,6 +78,8 @@ export default function ProcessingScreen() {
         app_game: appGame,
         chaos_score: out.chaosScore,
         timed_out: out.timedOut,
+        replay_during_processing: replay,
+        recording_duration_sec: store.pendingRecordingDurationSec ?? 0,
       });
 
       if (out.timedOut) {
@@ -156,7 +139,7 @@ export default function ProcessingScreen() {
 
   if (timedOut) {
     return (
-      <Screen title="Taking too long" subtitle="The room shouldn’t stall — try again or skip.">
+      <Screen title="Taking too long" subtitle="The room shouldn't stall — try again or skip.">
         <View style={styles.center}>
           <Text style={styles.warn}>Something went wrong — usually network or a busy server.</Text>
           <PrimaryButton title="Retry" onPress={retry} />
@@ -168,11 +151,17 @@ export default function ProcessingScreen() {
   }
 
   return (
-    <Screen title="Listen back!" subtitle={line}>
+    <Screen title={willReplay ? 'Listen back!' : 'Translating…'} subtitle={line}>
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Colors.party.accent} style={styles.spinner} />
-        <Text style={styles.betPrompt}>🗣 That's what they said…</Text>
-        <Text style={styles.note}>Shout your guesses — what is it in English?</Text>
+        {willReplay ? (
+          <>
+            <Text style={styles.betPrompt}>🗣 That's what they said…</Text>
+            <Text style={styles.note}>Shout your guesses — what is it in English?</Text>
+          </>
+        ) : (
+          <Text style={styles.note}>Hang tight — the room hears the reveal in a moment.</Text>
+        )}
       </View>
     </Screen>
   );
