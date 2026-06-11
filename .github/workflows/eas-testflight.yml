@@ -1,0 +1,49 @@
+# Cloud build on EAS + submit to TestFlight on every push to main that touches the app.
+#
+# One-time setup before this works:
+#   1. Create an Expo access token: https://expo.dev/settings/access-tokens
+#   2. Add it as a repo secret named EXPO_TOKEN:
+#      GitHub repo → Settings → Secrets and variables → Actions → New repository secret
+#   3. Store an App Store Connect API key in EAS credentials (`eas credentials` → iOS →
+#      App Store Connect API Key) so `eas submit` runs without an Apple login prompt.
+#   4. Recommended for CI: switch eas.json "appVersionSource" to "remote" so build
+#      numbers auto-increment on EAS servers (a local bump made inside CI is thrown away
+#      and the next build would collide with the previous build number).
+#
+# Manual trigger is also available from the Actions tab (workflow_dispatch).
+name: EAS build → TestFlight
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'babel-party/**'
+  workflow_dispatch:
+
+concurrency:
+  group: eas-testflight
+  cancel-in-progress: false
+
+jobs:
+  build-and-submit:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: babel-party
+
+      - name: Build iOS (EAS cloud)
+        run: npx eas-cli@latest build --platform ios --profile production --non-interactive --wait
+        working-directory: babel-party
+
+      - name: Submit to TestFlight (with What to Test notes)
+        run: npm run submit:ios-testflight
+        working-directory: babel-party
